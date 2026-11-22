@@ -19,6 +19,7 @@ import java.util.Set;
 
 import static org.jingxu.util.Data.*;
 
+/** 管理参赛报名、邀请、资格占用和审核历史。 */
 @Service
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class RegistrationService {
@@ -27,6 +28,7 @@ public class RegistrationService {
     private final AccountService accounts;
     private final ObjectMapper json;
 
+    /** 接入报名数据、赛事、身份核验和快照序列化。 */
     public RegistrationService(RegistrationMapper mapper, CompetitionService competitions, AccountService accounts, ObjectMapper json) {
         this.mapper = mapper;
         this.competitions = competitions;
@@ -34,16 +36,19 @@ public class RegistrationService {
         this.json = json;
     }
 
+    /** 列出当前学生所属的报名及相关时间。 */
     public Map<String, Object> studentList(Actor actor, Map<String, ?> values) {
         Long competition = text(values, "competitionId").isBlank() ? null : number(values, "competitionId");
         return list(competition, actor.id(), false, values);
     }
 
+    /** 按赛事管理权限分页筛选报名。 */
     public Map<String, Object> adminList(Actor actor, long competitionId, Map<String, ?> values) {
         competitions.checkManager(actor, competitions.require(competitionId));
         return list(competitionId, null, true, values);
     }
 
+    /** 复用分页逻辑并转换报名记录的展示时间。 */
     private Map<String, Object> list(Long competitionId, Long studentId, boolean admin, Map<String, ?> values) {
         int page = queryNumber(values, "page", 1, 100_000);
         int size = queryNumber(values, "size", 20, 100);
@@ -60,12 +65,14 @@ public class RegistrationService {
         return page(rows, page, size, mapper.count(query));
     }
 
+    /** 核对成员权限后提供报名详情。 */
     public Map<String, Object> studentDetail(Actor actor, long id) {
         Map<String, Object> registration = require(id);
         requireMember(actor, registration);
         return detail(registration);
     }
 
+    /** 校验赛事管理权后提供报名详情。 */
     public Map<String, Object> adminDetail(Actor actor, long id) {
         Map<String, Object> registration = require(id);
         competitions.checkManager(actor, competitions.require(number(registration, "competitionId")));
@@ -73,6 +80,7 @@ public class RegistrationService {
         return detail(registration);
     }
 
+    /** 组装成员、报名阶段和流转记录。 */
     private Map<String, Object> detail(Map<String, Object> registration) {
         long id = number(registration, "id");
         registration.put("submittedAt", withOffset(registration, "submittedAt"));
@@ -97,6 +105,7 @@ public class RegistrationService {
         return registration;
     }
 
+    /** 在报名期为已核验学生建立个人或团队草稿。 */
     public Map<String, Object> create(Actor actor, long competitionId, Map<String, ?> values) {
         Map<String, Object> competition = competitions.lock(competitionId);
         LocalDateTime now = competitions.now();
@@ -111,6 +120,7 @@ public class RegistrationService {
         return studentDetail(actor, number(row, "id"));
     }
 
+    /** 修改队名并检查报名状态窗口及版本。 */
     public Map<String, Object> rename(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> competition = competitions.lock(number(require(id), "competitionId"));
         Map<String, Object> row = lock(id);
@@ -122,6 +132,7 @@ public class RegistrationService {
         return studentDetail(actor, id);
     }
 
+    /** 清理成员关联后删除尚未提交的报名草稿。 */
     public void delete(Actor actor, long id) {
         Map<String, Object> competition = competitions.lock(number(require(id), "competitionId"));
         Map<String, Object> row = lock(id);
@@ -132,10 +143,12 @@ public class RegistrationService {
         mapper.deleteDraft(id);
     }
 
+    /** 读取当前学生的组队邀请。 */
     public List<Map<String, Object>> invitations(Actor actor) {
         return mapper.invitations(actor.id());
     }
 
+    /** 使用邀请码添加仍具备资格的受邀学生。 */
     public Map<String, Object> invite(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> competition = competitions.lock(number(require(id), "competitionId"));
         Map<String, Object> row = lock(id);
@@ -157,6 +170,7 @@ public class RegistrationService {
         return studentDetail(actor, id);
     }
 
+    /** 在可编辑阶段移除非队长成员。 */
     public void removeMember(Actor actor, long id, long studentId) {
         Map<String, Object> competition = competitions.lock(number(require(id), "competitionId"));
         Map<String, Object> row = lock(id);
@@ -167,6 +181,7 @@ public class RegistrationService {
         mapper.bump(id);
     }
 
+    /** 记录受邀成员的确认或拒绝。 */
     public Map<String, Object> answer(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> competition = competitions.lock(number(require(id), "competitionId"));
         Map<String, Object> row = lock(id);
@@ -184,6 +199,7 @@ public class RegistrationService {
         return fields("registrationId", id, "invitationStatus", next);
     }
 
+    /** 正式提交或补正重交，原子保存资格占用和成员快照。 */
     public Map<String, Object> submit(Actor actor, long id, Map<String, ?> values, boolean resubmission) {
         long competitionId = number(require(id), "competitionId");
         Map<String, Object> competition = competitions.lock(competitionId);
@@ -219,6 +235,7 @@ public class RegistrationService {
         return studentDetail(actor, id);
     }
 
+    /** 撤回已提交报名并释放参赛资格。 */
     public Map<String, Object> withdraw(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> competition = competitions.lock(number(require(id), "competitionId"));
         Map<String, Object> row = lock(id);
@@ -234,6 +251,7 @@ public class RegistrationService {
         return studentDetail(actor, id);
     }
 
+    /** 处理资格审核并在退回时检查补正期限。 */
     public Map<String, Object> decide(Actor actor, long id, Map<String, ?> values) {
         long competitionId = number(require(id), "competitionId");
         Map<String, Object> competition = competitions.managedLock(actor, competitionId);
@@ -258,6 +276,7 @@ public class RegistrationService {
         return adminDetail(actor, id);
     }
 
+    /** 在资格审核截止后处理尚未通过的报名。 */
     @Scheduled(initialDelay = 15000, fixedDelay = 60000)
     public void expireDue() {
         for (long competitionId : mapper.dueCompetitions(competitions.now())) {
@@ -271,6 +290,7 @@ public class RegistrationService {
         }
     }
 
+    /** 返回当前学生报名所属的已发布结果。 */
     public Map<String, Object> result(Actor actor, long id) {
         requireMember(actor, require(id));
         Map<String, Object> result = mapper.currentResult(id);
@@ -278,32 +298,38 @@ public class RegistrationService {
         return result;
     }
 
+    /** 按编号读取报名，缺失时返回相应错误。 */
     public Map<String, Object> require(long id) {
         Map<String, Object> row = mapper.find(id);
         if (row == null) throw WebProblem.missing();
         return row;
     }
 
+    /** 锁定报名行用于状态变更。 */
     public Map<String, Object> lock(long id) {
         Map<String, Object> row = mapper.lock(id);
         if (row == null) throw WebProblem.missing();
         return row;
     }
 
+    /** 确认当前账号是报名负责人。 */
     public void requireCaptain(Actor actor, Map<String, ?> row) {
         if (actor.id() != number(row, "captainId")) throw WebProblem.missing();
     }
 
+    /** 确认当前账号可以查阅这条报名。 */
     public void requireMember(Actor actor, Map<String, ?> row) {
         if (actor.id() == number(row, "captainId")) return;
         Map<String, Object> member = member(number(row, "id"), actor.id());
         if (member == null || !"CONFIRMED".equals(member.get("invitationStatus"))) throw WebProblem.missing();
     }
 
+    /** 查找指定学生在报名中的成员记录。 */
     private Map<String, Object> member(long id, long studentId) {
         return mapper.members(id).stream().filter(row -> number(row, "studentId") == studentId).findFirst().orElse(null);
     }
 
+    /** 根据草稿或退回状态确定允许编辑的截止时间。 */
     private void checkEditable(Map<String, ?> row, Map<String, ?> competition, LocalDateTime now) {
         String end = switch (text(row, "status")) {
             case "DRAFT" -> "registrationClosesAt";
@@ -313,10 +339,12 @@ public class RegistrationService {
         competitions.requireWindow(competition, "registrationOpensAt", end, now);
     }
 
+    /** 要求赛事采用团队参赛方式。 */
     private static void requireTeam(Map<String, ?> competition) {
         if (!"TEAM".equals(competition.get("entryMode"))) throw WebProblem.conflict("此赛事为个人赛。");
     }
 
+    /** 写入新状态、名单快照和流转审计。 */
     private void advance(Map<String, ?> row, Long actor, String next, String reason, String snapshot,
                          LocalDateTime now, LocalDateTime submitted) {
         long id = number(row, "id");

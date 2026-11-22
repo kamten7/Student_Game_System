@@ -23,6 +23,7 @@ import java.util.Set;
 
 import static org.jingxu.util.Data.*;
 
+/** 管理赛事生命周期、赛程及公开公告。 */
 @Service
 public class CompetitionService {
     public static final List<String> DATES = List.of("registrationOpensAt", "registrationClosesAt", "correctionClosesAt",
@@ -33,6 +34,7 @@ public class CompetitionService {
     private final Clock clock;
     private final ObjectMapper json;
 
+    /** 接入赛事数据、账户审计和评分规则序列化。 */
     public CompetitionService(CompetitionMapper mapper, AccountService accounts, Clock clock, ObjectMapper json) {
         this.mapper = mapper;
         this.accounts = accounts;
@@ -40,6 +42,7 @@ public class CompetitionService {
         this.json = json;
     }
 
+    /** 根据可见范围及筛选条件分页查询赛事。 */
     public Map<String, Object> list(Actor organiser, Map<String, ?> values) {
         int page = queryNumber(values, "page", 1, 100_000);
         int size = queryNumber(values, "size", 20, 100);
@@ -51,30 +54,35 @@ public class CompetitionService {
         return page(items, page, size, mapper.count(filter));
     }
 
+    /** 返回公开可访问的赛事详情。 */
     public Map<String, Object> publicView(long id) {
         Map<String, Object> row = require(id);
         if ("DRAFT".equals(row.get("status"))) throw WebProblem.missing();
         return view(row, true);
     }
 
+    /** 校验管理权后返回赛事完整资料。 */
     public Map<String, Object> adminView(Actor actor, long id) {
         Map<String, Object> row = require(id);
         checkManager(actor, row);
         return view(row, false);
     }
 
+    /** 按编号读取赛事，缺失时返回相应错误。 */
     public Map<String, Object> require(long id) {
         Map<String, Object> row = mapper.find(id);
         if (row == null) throw WebProblem.missing();
         return row;
     }
 
+    /** 锁定赛事行以保护同一赛事中的并发写入。 */
     public Map<String, Object> lock(long id) {
         Map<String, Object> row = mapper.lock(id);
         if (row == null) throw WebProblem.missing();
         return row;
     }
 
+    /** 判断操作者的管理权限，并检查评审角色的利益冲突。 */
     public void checkManager(Actor actor, Map<String, ?> row) {
         if ((!actor.has("ADMIN") && (!actor.has("ORGANIZER") || actor.id() != number(row, "organizerId")))
                 || mapper.judgeInvolved(fields("competitionId", row.get("id"), "actorId", actor.id()))) {
@@ -82,6 +90,7 @@ public class CompetitionService {
         }
     }
 
+    /** 验证表单并保存新的赛事草稿。 */
     @Transactional
     public Map<String, Object> create(Actor actor, Map<String, ?> values) {
         Map<String, Object> row = validated(values);
@@ -92,6 +101,7 @@ public class CompetitionService {
         return adminView(actor, number(row, "id"));
     }
 
+    /** 按版本保存草稿规则、赛程和维度。 */
     @Transactional
     public Map<String, Object> edit(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> current = managedLock(actor, id);
@@ -107,6 +117,7 @@ public class CompetitionService {
         return adminView(actor, id);
     }
 
+    /** 删除未发布草稿并记录赛事名称供审计查询。 */
     @Transactional
     public void delete(Actor actor, long id) {
         Map<String, Object> draft = managedLock(actor, id);
@@ -115,6 +126,7 @@ public class CompetitionService {
         mark(actor, "COMPETITION_DELETED", id, fields("targetName", draft.get("name")));
     }
 
+    /** 在报名截止前将草稿发布。 */
     @Transactional
     public Map<String, Object> publish(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> row = managedLock(actor, id);
@@ -126,6 +138,7 @@ public class CompetitionService {
         return transition(actor, id, "PUBLISHED", null);
     }
 
+    /** 停止赛事并记录取消原因。 */
     @Transactional
     public Map<String, Object> cancel(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> row = managedLock(actor, id);
@@ -134,6 +147,7 @@ public class CompetitionService {
         return transition(actor, id, "CANCELLED", required(values, "reason", 400));
     }
 
+    /** 归档已经发布结果的赛事。 */
     @Transactional
     public Map<String, Object> archive(Actor actor, long id) {
         Map<String, Object> row = managedLock(actor, id);
@@ -142,6 +156,7 @@ public class CompetitionService {
         return transition(actor, id, "ARCHIVED", null);
     }
 
+    /** 延长单个阶段，必要时将后续节点同步顺延。 */
     @Transactional
     public Map<String, Object> extend(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> row = managedLock(actor, id);
@@ -172,12 +187,14 @@ public class CompetitionService {
         return adminView(actor, id);
     }
 
+    /** 读取管理端赛事概览和统计。 */
     public Map<String, Object> overview(Actor actor, long id) {
         Map<String, Object> result = adminView(actor, id);
         result.putAll(mapper.overview(id));
         return result;
     }
 
+    /** 返回指定赛事当前公开的公告。 */
     @Transactional(readOnly = true)
     public Map<String, Object> announcement(long id) {
         Map<String, Object> result = mapper.announcement(id);
@@ -186,6 +203,7 @@ public class CompetitionService {
         return result;
     }
 
+    /** 分页查询已发布的获奖公告。 */
     @Transactional(readOnly = true)
     public Map<String, Object> announcements(Map<String, ?> values) {
         int page = queryNumber(values, "page", 1, 100_000);
@@ -195,6 +213,7 @@ public class CompetitionService {
         return page(items, page, size, mapper.countAnnouncements());
     }
 
+    /** 按公告批次合并公开获奖条目和名单。 */
     private void attachAwards(List<Map<String, Object>> announcements) {
         if (announcements.isEmpty()) return;
         List<Long> batchIds = announcements.stream().map(row -> number(row, "publicationId")).toList();
@@ -214,20 +233,24 @@ public class CompetitionService {
         }
     }
 
+    /** 锁定赛事后验证当前操作者的管理权。 */
     public Map<String, Object> managedLock(Actor actor, long id) {
         Map<String, Object> row = lock(id);
         checkManager(actor, row);
         return row;
     }
 
+    /** 记录赛事级操作及结构化摘要。 */
     public void mark(Actor actor, String action, long id, Map<String, Object> summary) {
         accounts.audit(actor.id(), action, "COMPETITION", id, summary);
     }
 
+    /** 要求赛事为允许业务写入的已发布状态。 */
     public void requireOpen(Map<String, ?> competition) {
         if (!"PUBLISHED".equals(competition.get("status"))) throw WebProblem.conflict("赛事当前不可写入。");
     }
 
+    /** 校验开始时刻可操作，截止时刻起关闭。 */
     public void requireWindow(Map<String, ?> row, String start, String end, LocalDateTime at) {
         requireOpen(row);
         if (at.isBefore(date(row, start)) || !at.isBefore(date(row, end))) {
@@ -235,18 +258,22 @@ public class CompetitionService {
         }
     }
 
+    /** 返回微秒精度的当前业务时刻。 */
     public LocalDateTime now() { return LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS); }
 
+    /** 限定操作仅针对尚未发布的赛事草稿。 */
     private static void requireDraft(Map<String, ?> row) {
         if (!"DRAFT".equals(row.get("status"))) throw WebProblem.conflict("仅赛事草稿可执行此操作。");
     }
 
+    /** 保存赛事状态变化并追加审计。 */
     private Map<String, Object> transition(Actor actor, long id, String status, String reason) {
         mapper.updateState(fields("id", id, "status", status, "reason", reason));
         mark(actor, "COMPETITION_" + status, id, fields("reason", reason));
         return adminView(actor, id);
     }
 
+    /** 校验并归一化参赛方式、队伍人数、赛程和评分规则。 */
     private Map<String, Object> validated(Map<String, ?> values) {
         String mode = required(values, "entryMode", 12);
         if (!Set.of("INDIVIDUAL", "TEAM").contains(mode)) throw WebProblem.invalid("请选择个人赛或团队赛。");
@@ -260,6 +287,7 @@ public class CompetitionService {
         return row;
     }
 
+    /** 按赛程顺序检查各节点与严格的起止条件。 */
     private void validateDates(Map<String, ?> row) {
         for (int i = 1; i < DATES.size(); i++) {
             int comparison = date(row, DATES.get(i - 1)).compareTo(date(row, DATES.get(i)));
@@ -269,6 +297,7 @@ public class CompetitionService {
         }
     }
 
+    /** 校验评分维度和权重总和并编码保存。 */
     private String rubric(Object value) {
         if (!(value instanceof List<?> dimensions) || dimensions.isEmpty() || dimensions.size() > 12) {
             throw WebProblem.invalid("评分规则须包含 1 至 12 个评分维度。");
@@ -299,6 +328,7 @@ public class CompetitionService {
         return JsonSupport.encode(json, normalized);
     }
 
+    /** 将赛事保存的评分规则还原为维度列表。 */
     public List<Map<String, Object>> criteria(Map<String, ?> row) {
         try {
             return json.readValue(text(row, "scoringRubric"), new TypeReference<>() {});
@@ -307,6 +337,7 @@ public class CompetitionService {
         }
     }
 
+    /** 转换赛程字段和阶段，按公开范围裁剪内容。 */
     private Map<String, Object> view(Map<String, Object> raw, boolean publicOnly) {
         Map<String, Object> row = fields();
         row.putAll(raw);
@@ -321,6 +352,7 @@ public class CompetitionService {
         return row;
     }
 
+    /** 根据当前发布批次和赛程计算展示阶段。 */
     public String phase(Map<String, ?> row) {
         String status = text(row, "status");
         if (Set.of("DRAFT", "CANCELLED").contains(status)) return status;

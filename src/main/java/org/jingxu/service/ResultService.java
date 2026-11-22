@@ -32,6 +32,7 @@ import java.util.TreeMap;
 
 import static org.jingxu.util.Data.*;
 
+/** 计算竞赛排名，管理结果预览、发布及更正。 */
 @Service
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class ResultService {
@@ -42,6 +43,7 @@ public class ResultService {
     private final ObjectMapper json;
     private final byte[] previewKey = new byte[32];
 
+    /** 接入结果与评分数据、状态服务和签名所需配置。 */
     public ResultService(ResultMapper mapper, ReviewMapper reviewMapper, ReviewService reviews,
                          CompetitionService competitions, ObjectMapper json) {
         this.mapper = mapper;
@@ -52,10 +54,13 @@ public class ResultService {
         new SecureRandom().nextBytes(previewKey);
     }
 
+    /** 保存本次发布模式、基准批次及结果更正输入。 */
     private record Inputs(String mode, Long baseId, boolean noAwards, String reason,
                           Map<Long, Map<String, Object>> changes) {}
+    /** 保存候选结果、签名依据及阻碍发布的问题。 */
     private record Draft(List<Map<String, Object>> results, List<Map<String, Object>> basis, List<String> problems) {}
 
+    /** 按当前数据生成有时效的发布预览。 */
     public Map<String, Object> preview(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> competition = competitions.managedLock(actor, id);
         Inputs input = inputs(values, required(values, "mode", 12));
@@ -66,6 +71,7 @@ public class ResultService {
                 "previewToken", draft.problems().isEmpty() ? sign(actor, competition, input, draft, expires) : null);
     }
 
+    /** 核对预览和幂等标识后原子发布结果批次。 */
     public Map<String, Object> publish(Actor actor, long id, String mode, Map<String, ?> values) {
         Map<String, Object> competition = competitions.managedLock(actor, id);
         Inputs input = inputs(values, mode);
@@ -106,6 +112,7 @@ public class ResultService {
         return batch(actor, id, publicationId);
     }
 
+    /** 返回赛事的结果发布历史。 */
     public List<Map<String, Object>> batches(Actor actor, long id) {
         competitions.checkManager(actor, competitions.require(id));
         List<Map<String, Object>> rows = mapper.batches(id);
@@ -113,6 +120,7 @@ public class ResultService {
         return rows;
     }
 
+    /** 读取指定批次及其历史结果快照。 */
     public Map<String, Object> batch(Actor actor, long id, long publicationId) {
         competitions.checkManager(actor, competitions.require(id));
         Map<String, Object> row = find(id, publicationId);
@@ -130,18 +138,21 @@ public class ResultService {
         return row;
     }
 
+    /** 转换发布时间、当前批次及无获奖标志。 */
     private static void formatBatch(Map<String, Object> row) {
         row.put("publishedAt", withOffset(row, "publishedAt"));
         row.put("currentBatch", flag(row.get("currentBatch")));
         row.put("noAwards", flag(row.get("noAwards")));
     }
 
+    /** 在指定赛事范围内读取一个发布批次。 */
     private Map<String, Object> find(long id, long publicationId) {
         Map<String, Object> row = mapper.batch(fields("competitionId", id, "publicationId", publicationId));
         if (row == null) throw WebProblem.missing();
         return row;
     }
 
+    /** 基于有效评分生成结果、排名和发布校验问题。 */
     private Draft compute(Map<String, Object> competition, Inputs input) {
         long id = number(competition, "id");
         List<Map<String, Object>> criteria = competitions.criteria(competition);
@@ -180,6 +191,7 @@ public class ResultService {
         return new Draft(results, basis, problems);
     }
 
+    /** 合并报名数据、历史快照和更正项以生成单条结果。 */
     private Map<String, Object> baseResult(Map<String, Object> source, Map<String, Object> old,
                                            Map<String, Object> change, Inputs input) {
         boolean missing = source.get("submissionId") == null;
@@ -248,6 +260,7 @@ public class ResultService {
         }
     }
 
+    /** 解析发布模式、基准批次、奖项和更正原因。 */
     private Inputs inputs(Map<String, ?> values, String mode) {
         if (!Set.of("FIRST", "CORRECTION").contains(mode)) throw WebProblem.invalid("结果发布模式无效。");
         boolean correction = "CORRECTION".equals(mode);
@@ -257,6 +270,7 @@ public class ResultService {
                 Boolean.TRUE.equals(noAwards), correction ? required(values, "reason", 400) : null, edits(values.get("awards")));
     }
 
+    /** 解析各报名的结果更正项并限制可修改字段。 */
     private Map<Long, Map<String, Object>> edits(Object raw) {
         Map<Long, Map<String, Object>> rows = new TreeMap<>();
         if (raw == null) return rows;
@@ -277,6 +291,7 @@ public class ResultService {
         return rows;
     }
 
+    /** 校验奖项允许公开的获奖人员姓名。 */
     private static List<String> publicNames(Object source) {
         if (!(source instanceof List<?> list) || list.size() > 20) {
             throw WebProblem.invalid("公开获奖姓名须为列表，最多填写 20 位。");
@@ -291,12 +306,14 @@ public class ResultService {
         return List.copyOf(names);
     }
 
+    /** 检查赛事状态与当前批次是否允许本次发布。 */
     private static void validateMode(Inputs input, Map<String, ?> competition) {
         if (!Set.of("PUBLISHED", "ARCHIVED").contains(text(competition, "status"))) throw WebProblem.conflict("赛事当前不可发布结果。");
         Long current = competition.get("currentPublicationId") == null ? null : number(competition, "currentPublicationId");
         if (!java.util.Objects.equals(current, input.baseId())) throw WebProblem.conflict("当前结果批次已变化。");
     }
 
+    /** 对预览依据、操作者和到期时刻生成签名令牌。 */
     private String sign(Actor actor, Map<String, ?> competition, Inputs input, Draft draft, long expires) {
         String payload = JsonSupport.encode(json, fields("actor", actor.id(), "id", competition.get("id"), "version",
                 competition.get("rowVersion"), "expires", expires, "input", input, "results", draft.results(), "basis", draft.basis()));
@@ -309,6 +326,7 @@ public class ResultService {
         }
     }
 
+    /** 从预览令牌解析到期时刻。 */
     private static long expires(String token) {
         if (!token.matches("[0-9]{1,12}\\.[a-f0-9]{64}")) return 0;
         return Long.parseLong(token.substring(0, token.indexOf('.')));

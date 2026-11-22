@@ -17,6 +17,7 @@ import java.util.Map;
 
 import static org.jingxu.util.Data.*;
 
+/** 管理匿名作品交件、历史版本和评审锁定。 */
 @Service
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class SubmissionService {
@@ -25,6 +26,7 @@ public class SubmissionService {
     private final RegistrationService registrations;
     private final PdfStorage storage;
 
+    /** 接入交件数据、赛程、报名和私有文件存储。 */
     public SubmissionService(SubmissionMapper mapper, CompetitionService competitions,
                              RegistrationService registrations, PdfStorage storage) {
         this.mapper = mapper;
@@ -33,12 +35,14 @@ public class SubmissionService {
         this.storage = storage;
     }
 
+    /** 验证报名成员权限后读取作品历史。 */
     public Map<String, Object> studentView(Actor actor, long registrationId) {
         registrations.requireMember(actor, registrations.require(registrationId));
         Map<String, Object> submission = mapper.forRegistration(registrationId);
         return submission == null ? fields("registrationId", registrationId, "versions", List.of()) : view(submission);
     }
 
+    /** 校验 PDF 和交件期限，幂等保存作品版本。 */
     public Map<String, Object> upload(Actor actor, long registrationId, String titleInput,
                                       String requestInput, MultipartFile file) {
         Map<String, Object> parent = registrations.require(registrationId);
@@ -79,6 +83,7 @@ public class SubmissionService {
         }
     }
 
+    /** 验证报名成员身份后下载指定版本。 */
     public PdfAttachment studentFile(Actor actor, long registrationId, int versionNo) {
         registrations.requireMember(actor, registrations.require(registrationId));
         Map<String, Object> row = mapper.forRegistration(registrationId);
@@ -86,30 +91,35 @@ public class SubmissionService {
         return file(row, versionNo);
     }
 
+    /** 验证赛管权限后下载指定作品版本。 */
     public PdfAttachment adminFile(Actor actor, long submissionId, int versionNo) {
         Map<String, Object> row = require(submissionId);
         competitions.checkManager(actor, competitions.require(number(row, "competitionId")));
         return file(row, versionNo);
     }
 
+    /** 按作品和版本号查找对应文件。 */
     private PdfAttachment file(Map<String, ?> row, int versionNo) {
         Map<String, Object> version = mapper.version(fields("id", row.get("id"), "version", versionNo));
         if (version == null) throw WebProblem.missing();
         return storage.attachment(text(version, "storageKey"), text(row, "anonymousCode") + "-V" + versionNo);
     }
 
+    /** 以匿名编号返回仅供当前任务评审的文件。 */
     public PdfAttachment judgeFile(Map<String, ?> assignment) {
         Map<String, Object> version = mapper.versionById(number(assignment, "versionId"));
         if (version == null) throw WebProblem.missing();
         return storage.attachment(text(version, "storageKey"), text(assignment, "anonymousCode"));
     }
 
+    /** 验证赛事管理权后读取作品详情。 */
     public Map<String, Object> adminView(Actor actor, long id) {
         Map<String, Object> row = require(id);
         competitions.checkManager(actor, competitions.require(number(row, "competitionId")));
         return view(row);
     }
 
+    /** 分页查询参评作品、版本与评分情况。 */
     public Map<String, Object> list(Actor actor, long competitionId, Map<String, ?> values) {
         competitions.checkManager(actor, competitions.require(competitionId));
         int page = queryNumber(values, "page", 1, 100_000);
@@ -121,6 +131,7 @@ public class SubmissionService {
         return page(rows, page, size, mapper.workCount(query));
     }
 
+    /** 记录作品参评决定及原因。 */
     public Map<String, Object> eligibility(Actor actor, long id, Map<String, ?> values) {
         long competitionId = number(require(id), "competitionId");
         Map<String, Object> competition = competitions.managedLock(actor, competitionId);
@@ -139,12 +150,14 @@ public class SubmissionService {
         return adminView(actor, id);
     }
 
+    /** 按编号读取作品，缺失时返回相应错误。 */
     public Map<String, Object> require(long id) {
         Map<String, Object> row = mapper.find(id);
         if (row == null) throw WebProblem.missing();
         return row;
     }
 
+    /** 交件窗口关闭后，将最后一个有效版本锁定用于评审。 */
     public Map<String, Object> lockFinal(long id, Map<String, ?> competition) {
         Map<String, Object> row = mapper.lock(id);
         LocalDateTime now = competitions.now();
@@ -156,6 +169,7 @@ public class SubmissionService {
         return mapper.lock(id);
     }
 
+    /** 组装作品版本列表并格式化锁定时间。 */
     private Map<String, Object> view(Map<String, Object> row) {
         row.put("lockedAt", withOffset(row, "lockedAt"));
         row.put("versions", mapper.versions(number(row, "id")).stream()
@@ -163,16 +177,19 @@ public class SubmissionService {
         return row;
     }
 
+    /** 生成面向用户的作品版本和回执信息。 */
     private static Map<String, Object> versionView(Map<String, Object> version, String code) {
         return fields("id", version.get("id"), "versionNo", version.get("versionNo"), "title", version.get("title"),
                 "submittedAt", withOffset(version, "submittedAt"), "receipt", code + "-V" + version.get("versionNo"));
     }
 
+    /** 校验交件或发布请求标识的格式。 */
     static String requireRequestId(String value) {
         if (value == null || !value.matches("[A-Za-z0-9_-]{8,64}")) throw WebProblem.invalid("请求标识格式有误。");
         return value;
     }
 
+    /** 计算幂等校验使用的 SHA-256 字符串摘要。 */
     static String hash(String value) {
         return HexFormat.of().formatHex(PdfStorage.sha256().digest(value.getBytes(StandardCharsets.UTF_8)));
     }

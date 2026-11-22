@@ -17,10 +17,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.UUID;
 
+/** 校验和保存私有作品 PDF，并构造下载文件。 */
 @Component
 public class PdfStorage {
     private final Path root;
 
+    /** 解析附件目录，缺省时使用容器实例的私有目录。 */
     public PdfStorage() {
         String value = System.getenv("STUDENT_ATTACHMENTS_DIR");
         this.root = (value == null || value.isBlank()
@@ -28,7 +30,9 @@ public class PdfStorage {
                 : Path.of(value)).toAbsolutePath().normalize();
     }
 
+    /** 保存临时文件位置及其内容摘要。 */
     public record StagedPdf(Path path, String sha256) implements AutoCloseable {
+        /** 清理尚未提交的临时文件。 */
         @Override
         public void close() {
             try {
@@ -39,6 +43,7 @@ public class PdfStorage {
         }
     }
 
+    /** 验证上传内容并将其暂存，同时计算 SHA-256 摘要。 */
     public StagedPdf stage(MultipartFile file) {
         if (file == null || file.isEmpty()) throw WebProblem.invalid("请选择匿名 PDF。");
         if (file.getSize() > 20L * 1024 * 1024) throw new WebProblem(413, "FILE_TOO_LARGE", "PDF 不得超过 20 MiB。");
@@ -64,6 +69,7 @@ public class PdfStorage {
         }
     }
 
+    /** 检查 PDF 文件头、页数和加密状态。 */
     private static void verifyPdf(Path path) {
         try (InputStream input = Files.newInputStream(path)) {
             byte[] header = input.readNBytes(5);
@@ -76,10 +82,12 @@ public class PdfStorage {
         }
     }
 
+    /** 为无法处理的 PDF 生成一致的错误。 */
     private static WebProblem invalidPdf() {
         return new WebProblem(415, "INVALID_PDF", "文件须为结构完整且未加密的 PDF。");
     }
 
+    /** 将已暂存文件原子移动到正式存储位置。 */
     public String commit(StagedPdf staged) {
         String key = UUID.randomUUID().toString().replace("-", "") + ".pdf";
         try {
@@ -90,6 +98,7 @@ public class PdfStorage {
         }
     }
 
+    /** 验证存储键和文件存在性后构造下载对象。 */
     public PdfAttachment attachment(String key, String displayName) {
         if (!key.matches("[a-f0-9]{32}\\.pdf")) throw WebProblem.missing();
         Path file = root.resolve(key);
@@ -97,6 +106,7 @@ public class PdfStorage {
         return new PdfAttachment(file, displayName + ".pdf");
     }
 
+    /** 创建用于计算文件摘要的 SHA-256 实例。 */
     public static MessageDigest sha256() {
         try {
             return MessageDigest.getInstance("SHA-256");

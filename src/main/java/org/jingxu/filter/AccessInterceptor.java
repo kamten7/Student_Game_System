@@ -14,16 +14,19 @@ import java.security.MessageDigest;
 import java.util.Set;
 import java.util.UUID;
 
+/** 在请求进入业务层前校验会话、角色和表单令牌。 */
 public class AccessInterceptor implements HandlerInterceptor {
     private static final String ACCOUNT = "accountId";
     private static final String TOKEN = "csrfToken";
     private static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
     private final AccountService accounts;
 
+    /** 接入账户服务以在每次请求解析当前角色。 */
     public AccessInterceptor(AccountService accounts) {
         this.accounts = accounts;
     }
 
+    /** 读取实时授权，拦截越权请求，并校验写操作令牌。 */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         Object mapping = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
@@ -69,21 +72,25 @@ public class AccessInterceptor implements HandlerInterceptor {
         return true;
     }
 
+    /** 识别必须登录才能访问的资源范围。 */
     private static boolean protectedRoute(String resource) {
         return within(resource, "/student") || within(resource, "/judge") || within(resource, "/admin")
                 || within(resource, "/me") || resource.equals("/auth/logout");
     }
 
+    /** 按路由段边界判断路径是否位于指定资源下。 */
     private static boolean within(String path, String base) {
         return path.equals(base) || path.startsWith(base + "/");
     }
 
+    /** 返回已认证请求绑定的账号身份。 */
     public static Actor actor(HttpServletRequest request) {
         Actor actor = (Actor) request.getAttribute("actor");
         if (actor == null) throw WebProblem.unauthenticated();
         return actor;
     }
 
+    /** 读取当前会话令牌，需要时初始化新值。 */
     public static String token(HttpServletRequest request) {
         HttpSession session = request.getSession();
         synchronized (session) {
@@ -95,6 +102,7 @@ public class AccessInterceptor implements HandlerInterceptor {
         }
     }
 
+    /** 替换旧会话标识并签发新的校验令牌。 */
     public static void signIn(HttpServletRequest request, Actor actor) {
         HttpSession session = request.getSession();
         request.changeSessionId();
@@ -102,11 +110,13 @@ public class AccessInterceptor implements HandlerInterceptor {
         session.setAttribute(TOKEN, newToken());
     }
 
+    /** 使当前登录会话失效。 */
     public static void signOut(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session != null) session.invalidate();
     }
 
+    /** 生成新的随机校验令牌。 */
     private static String newToken() {
         return UUID.randomUUID().toString() + UUID.randomUUID();
     }
