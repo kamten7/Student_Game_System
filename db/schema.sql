@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS user_account (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(48) NOT NULL UNIQUE,
     password_hash VARCHAR(60) NOT NULL,
+    staff_name VARCHAR(60),
     status VARCHAR(12) NOT NULL DEFAULT 'ACTIVE',
     deleted_at DATETIME(6),
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),

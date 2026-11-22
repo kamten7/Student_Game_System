@@ -9,19 +9,20 @@ SET @demo_pdf_sha = 'bec3f158a7f2e7c1958ec763fcde69f8cb84bd71fc76ebe9886610ed5a8
 
 CREATE TEMPORARY TABLE demo_accounts (
     username VARCHAR(48) PRIMARY KEY,
-    role_code VARCHAR(16) NOT NULL
+    role_code VARCHAR(16) NOT NULL,
+    staff_name VARCHAR(60)
 );
 INSERT INTO demo_accounts VALUES
-    ('demo.admin', 'ADMIN'),
-    ('demo.organizer', 'ORGANIZER'),
-    ('demo.judge01', 'JUDGE'),
-    ('demo.judge02', 'JUDGE'),
-    ('demo.student01', 'STUDENT'),
-    ('demo.student02', 'STUDENT'),
-    ('demo.student03', 'STUDENT'),
-    ('demo.student04', 'STUDENT'),
-    ('demo.student05', 'STUDENT'),
-    ('demo.student06', 'STUDENT');
+    ('demo.admin', 'ADMIN', '沈知远'),
+    ('demo.organizer', 'ORGANIZER', '唐婧'),
+    ('demo.judge01', 'JUDGE', '顾砚'),
+    ('demo.judge02', 'JUDGE', '叶澄'),
+    ('demo.student01', 'STUDENT', NULL),
+    ('demo.student02', 'STUDENT', NULL),
+    ('demo.student03', 'STUDENT', NULL),
+    ('demo.student04', 'STUDENT', NULL),
+    ('demo.student05', 'STUDENT', NULL),
+    ('demo.student06', 'STUDENT', NULL);
 
 CREATE TEMPORARY TABLE demo_events (
     code VARCHAR(12) PRIMARY KEY,
@@ -103,8 +104,8 @@ INSERT INTO demo_members VALUES
 
 START TRANSACTION;
 
-INSERT INTO user_account(username, password_hash)
-SELECT username, @demo_password_hash FROM demo_accounts ORDER BY username;
+INSERT INTO user_account(username, password_hash, staff_name)
+SELECT username, @demo_password_hash, staff_name FROM demo_accounts ORDER BY username;
 
 INSERT INTO user_role(user_id, role_id)
 SELECT a.id, r.id
