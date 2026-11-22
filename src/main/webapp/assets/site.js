@@ -63,6 +63,20 @@
         refresh();
     }
 
+    for (const form of document.querySelectorAll('[data-student-verification]')) {
+        const decision = form.elements.namedItem('decision');
+        const number = form.elements.namedItem('studentNo');
+
+        // 正式学号仅在核验通过时参与校验和提交。
+        function updateStudentNumber() {
+            number.required = decision.value === 'APPROVE';
+            number.disabled = !number.required;
+        }
+
+        decision.addEventListener('change', updateStudentNumber);
+        updateStudentNumber();
+    }
+
     for (const form of document.querySelectorAll('form[data-api]')) {
         form.addEventListener('submit', async event => {
             event.preventDefault();

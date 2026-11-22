@@ -18,12 +18,15 @@ import java.util.TreeMap;
 import static java.util.Map.entry;
 import static org.jingxu.util.Data.text;
 
+/** 把结构化审计记录转换成可查阅的中文描述。 */
 public final class AuditDisplay {
     private static final ZoneId DISPLAY_ZONE = ZoneId.of("Asia/Shanghai");
     private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final Map<String, String> ACTIONS = Map.ofEntries(
             entry("BOOTSTRAP_ADMIN", "创建首个管理员"), entry("ACCOUNT_STATE", "调整账户状态"),
-            entry("ACCOUNT_ROLES", "调整账户角色"), entry("STUDENT_VERIFICATION", "审核学生身份"),
+            entry("ACCOUNT_ROLES", "调整账户角色"), entry("ACCOUNT_NAME", "修改账户姓名"),
+            entry("ACCOUNT_USERNAME", "修改用户名"), entry("ACCOUNT_STAFF_CREATED", "创建工作人员账号"),
+            entry("STUDENT_VERIFICATION", "审核学生身份"),
             entry("COMPETITION_CREATED", "新建赛事草稿"), entry("COMPETITION_EDITED", "编辑赛事草稿"),
             entry("COMPETITION_DELETED", "删除赛事草稿"), entry("COMPETITION_PUBLISHED", "发布赛事"),
             entry("COMPETITION_CANCELLED", "取消赛事"), entry("COMPETITION_ARCHIVED", "归档赛事"),
@@ -37,12 +40,15 @@ public final class AuditDisplay {
             "correctionClosesAt", "报名补正", "qualificationClosesAt", "资格审核",
             "submissionClosesAt", "作品提交", "judgingClosesAt", "评审");
 
+    /** 限制工具类被实例化。 */
     private AuditDisplay() {}
 
+    /** 返回供审计页面筛选使用的操作名称。 */
     public static Map<String, String> actions() {
         return new TreeMap<>(ACTIONS);
     }
 
+    /** 填充操作人、对象、操作说明和本地显示时间。 */
     public static void describe(Map<String, Object> row, ObjectMapper json) {
         JsonNode details = details(json, text(row, "changeSummary"));
         String action = text(row, "action");
@@ -67,6 +73,7 @@ public final class AuditDisplay {
         row.put("displaySummary", summary(action, row, details));
     }
 
+    /** 按操作类型解释变更内容，并附上可用的原因。 */
     private static String summary(String action, Map<String, ?> row, JsonNode details) {
         String description = switch (action) {
             case "BOOTSTRAP_ADMIN" -> "系统初始化时创建了首个平台管理员。";
@@ -77,6 +84,9 @@ public final class AuditDisplay {
                 default -> "已调整该账号的状态。";
             };
             case "ACCOUNT_ROLES" -> roles(details.path("roles"));
+            case "ACCOUNT_NAME" -> "已保存该账户的姓名。";
+            case "ACCOUNT_USERNAME" -> "已更新该账户的登录用户名。";
+            case "ACCOUNT_STAFF_CREATED" -> "已创建工作人员账号。" + roles(details.path("roles"));
             case "STUDENT_VERIFICATION" -> switch (details.path("decision").asText("")) {
                 case "APPROVE" -> "学生身份核验通过，已绑定正式学号。";
                 case "REJECT" -> "学生身份核验未通过。";
@@ -121,6 +131,7 @@ public final class AuditDisplay {
         return reason.isBlank() ? description : description + " 原因是" + reason.strip();
     }
 
+    /** 按公告版本或批次编号描述发布记录。 */
     private static String publication(Map<String, ?> row, JsonNode details) {
         String version = text(row, "publicationVersion");
         if (!version.isBlank()) return "第 " + version + " 版获奖公告";
@@ -128,11 +139,13 @@ public final class AuditDisplay {
         return id.isBlank() ? "获奖公告" : "获奖公告，批次编号 " + id;
     }
 
+    /** 把相关编号格式化为用户能识别的业务对象引用。 */
     private static String reference(JsonNode details, String field, String noun) {
         String id = details.path(field).asText("");
         return id.isBlank() ? "该" + noun : noun + "（编号 " + id + "）";
     }
 
+    /** 将保存的角色代码转成中文授权说明。 */
     private static String roles(JsonNode values) {
         if (!values.isArray()) return "已更新该账号的角色。";
         var names = new ArrayList<String>();
@@ -140,6 +153,7 @@ public final class AuditDisplay {
         return names.isEmpty() ? "已移除该账号的全部角色。" : "账号角色已设为" + String.join("、", names) + "。";
     }
 
+    /** 解析历史变更摘要，遇到无效数据时降级为缺省内容。 */
     private static JsonNode details(ObjectMapper json, String source) {
         try {
             JsonNode parsed = json.readTree(source);
@@ -149,6 +163,7 @@ public final class AuditDisplay {
         }
     }
 
+    /** 将记录里的 UTC 截止时间转为显示时间。 */
     private static String displayDeadline(String value) {
         try {
             return display(LocalDateTime.parse(value).atOffset(ZoneOffset.UTC));
@@ -157,6 +172,7 @@ public final class AuditDisplay {
         }
     }
 
+    /** 以中国标准时区和统一格式显示时间。 */
     private static String display(OffsetDateTime value) {
         return value.atZoneSameInstant(DISPLAY_ZONE).format(DISPLAY_TIME);
     }

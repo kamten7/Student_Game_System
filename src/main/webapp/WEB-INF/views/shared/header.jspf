@@ -26,9 +26,11 @@
                         </c:when>
                         <c:when test="${area eq 'judge'}">
                             <a href="<c:url value='/judge'/>">我的评审</a>
+                            <c:if test="${actor.managesEvents()}"><a href="<c:url value='/admin'/>">赛事管理</a></c:if>
                         </c:when>
                         <c:otherwise>
                             <a href="<c:url value='/admin'/>">赛事管理</a>
+                            <c:if test="${actor.has('JUDGE')}"><a href="<c:url value='/judge'/>">我的评审</a></c:if>
                             <c:if test="${actor.has('ADMIN')}">
                                 <a href="<c:url value='/admin/accounts'/>">账户与核验</a>
                                 <a href="<c:url value='/admin/audit'/>">操作审计</a>

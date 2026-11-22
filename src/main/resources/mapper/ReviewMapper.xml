@@ -2,9 +2,11 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.jingxu.mapper.ReviewMapper">
     <select id="candidateList" resultType="map">
-        SELECT a.id, a.username FROM user_account a JOIN user_role ur ON ur.user_id = a.id
+        SELECT a.id, a.username, a.staff_name AS fullName
+        FROM user_account a JOIN user_role ur ON ur.user_id = a.id
         JOIN role ro ON ro.id = ur.role_id AND ro.role_code = 'JUDGE' JOIN competition c ON c.id = #{competitionId}
-        WHERE a.status='ACTIVE' AND a.id != c.organizer_id
+        LEFT JOIN student_profile p ON p.user_id = a.id
+        WHERE a.status='ACTIVE' AND p.user_id IS NULL AND a.id != c.organizer_id
         AND NOT EXISTS (SELECT 1 FROM participation_claim p WHERE p.competition_id=c.id AND p.student_id=a.id)
         AND NOT EXISTS (SELECT 1 FROM audit_log l WHERE l.actor_id=a.id AND l.target_type='COMPETITION' AND l.target_key=CAST(c.id AS CHAR))
         ORDER BY a.username, a.id
@@ -37,8 +39,9 @@
         UPDATE review_assignment SET status=#{status}, reason=#{reason} WHERE id=#{id}
     </update>
     <select id="listForSubmission" resultType="map">
-        SELECT <include refid="assignmentFields"/>, u.username
-        <include refid="assignmentJoins"/> JOIN user_account u ON u.id=a.judge_id WHERE s.id=#{submissionId} ORDER BY a.id
+        SELECT <include refid="assignmentFields"/>, u.username, COALESCE(p.full_name, u.staff_name) AS fullName
+        <include refid="assignmentJoins"/> JOIN user_account u ON u.id=a.judge_id
+        LEFT JOIN student_profile p ON p.user_id = u.id WHERE s.id=#{submissionId} ORDER BY a.id
     </select>
     <sql id="judgeFilter">
         WHERE a.judge_id=#{judgeId} AND c.status IN ('PUBLISHED','ARCHIVED')

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.jingxu.mapper.AccountMapper">
     <sql id="accountFields">
-        a.id, a.username, a.status, p.full_name AS fullName, p.claimed_student_no AS claimedStudentNo,
+        a.id, a.username, a.status, COALESCE(p.full_name, a.staff_name) AS fullName, p.claimed_student_no AS claimedStudentNo,
         p.student_no AS studentNo, p.department, p.major, p.verification_status AS verificationStatus
     </sql>
     <select id="credentials" resultType="map">
@@ -15,15 +15,23 @@
         SELECT <include refid="accountFields"/>, p.invite_code AS inviteCode
         FROM user_account a LEFT JOIN student_profile p ON p.user_id = a.id WHERE a.id = #{id}
     </select>
+    <sql id="roleMatchesProfile">
+        ((p.user_id IS NOT NULL AND r.role_code = 'STUDENT')
+         OR (p.user_id IS NULL AND r.role_code IN ('JUDGE', 'ORGANIZER', 'ADMIN')))
+    </sql>
     <select id="roles" resultType="string">
-        SELECT r.role_code FROM role r JOIN user_role ur ON ur.role_id = r.id WHERE ur.user_id = #{id} ORDER BY r.role_code
+        SELECT r.role_code FROM role r JOIN user_role ur ON ur.role_id = r.id
+        LEFT JOIN student_profile p ON p.user_id = ur.user_id
+        WHERE ur.user_id = #{id} AND <include refid="roleMatchesProfile"/> ORDER BY r.role_code
     </select>
     <select id="lockAdminRole" resultType="long">
         SELECT id FROM role WHERE role_code = 'ADMIN' FOR UPDATE
     </select>
     <select id="activeAdmins" resultType="int">
         SELECT COUNT(*) FROM user_account a JOIN user_role ur ON ur.user_id = a.id
-        JOIN role r ON r.id = ur.role_id WHERE a.status = 'ACTIVE' AND r.role_code = 'ADMIN'
+        JOIN role r ON r.id = ur.role_id
+        LEFT JOIN student_profile p ON p.user_id = a.id
+        WHERE a.status = 'ACTIVE' AND r.role_code = 'ADMIN' AND p.user_id IS NULL
     </select>
     <insert id="insertAccount" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_account(username, password_hash) VALUES(#{username}, #{hash})
@@ -38,6 +46,12 @@
     <delete id="removeRoles">DELETE FROM user_role WHERE user_id = #{id}</delete>
     <update id="updateAccount">
         UPDATE user_account SET status = #{status}, deleted_at = #{deletedAt} WHERE id = #{id}
+    </update>
+    <update id="updateStaffName">
+        UPDATE user_account SET staff_name = #{fullName} WHERE id = #{id}
+    </update>
+    <update id="updateUsername">
+        UPDATE user_account SET username = #{username} WHERE id = #{id}
     </update>
     <update id="updateProfile">
         UPDATE student_profile SET department = #{department}, major = #{major},
@@ -57,11 +71,15 @@
             <if test="status != ''">AND a.status = #{status}</if>
             <if test="verificationStatus != ''">AND p.verification_status = #{verificationStatus}</if>
             <if test="role != ''">AND EXISTS (SELECT 1 FROM user_role ur JOIN role r ON r.id = ur.role_id
-                WHERE ur.user_id = a.id AND r.role_code = #{role})</if>
+                WHERE ur.user_id = a.id AND r.role_code = #{role} AND <include refid="roleMatchesProfile"/>)</if>
         </where>
     </sql>
     <select id="listAccounts" resultType="map">
-        SELECT <include refid="accountFields"/> FROM user_account a LEFT JOIN student_profile p ON p.user_id = a.id
+        SELECT <include refid="accountFields"/>,
+            (SELECT GROUP_CONCAT(r.role_code ORDER BY r.role_code)
+             FROM user_role ur JOIN role r ON ur.role_id = r.id
+             WHERE ur.user_id = a.id AND <include refid="roleMatchesProfile"/>) AS roleCodes
+        FROM user_account a LEFT JOIN student_profile p ON p.user_id = a.id
         <include refid="accountFilter"/> ORDER BY a.id DESC LIMIT #{size} OFFSET #{offset}
     </select>
     <select id="countAccounts" resultType="long">
