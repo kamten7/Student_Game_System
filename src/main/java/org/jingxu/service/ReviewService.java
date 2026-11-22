@@ -20,6 +20,7 @@ import java.util.TreeMap;
 
 import static org.jingxu.util.Data.*;
 
+/** 管理评委分派、匿名评审和评分状态。 */
 @Service
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class ReviewService {
@@ -28,6 +29,7 @@ public class ReviewService {
     private final SubmissionService submissions;
     private final ObjectMapper json;
 
+    /** 接入任务、赛事、作品及评分序列化。 */
     public ReviewService(ReviewMapper mapper, CompetitionService competitions, SubmissionService submissions, ObjectMapper json) {
         this.mapper = mapper;
         this.competitions = competitions;
@@ -35,6 +37,7 @@ public class ReviewService {
         this.json = json;
     }
 
+    /** 按角色和状态查询当前评委的分派任务。 */
     public Map<String, Object> judgeList(Actor actor, Map<String, ?> values) {
         int page = queryNumber(values, "page", 1, 100_000);
         int size = queryNumber(values, "size", 20, 100);
@@ -46,6 +49,7 @@ public class ReviewService {
         return page(rows, page, size, mapper.judgeCount(query));
     }
 
+    /** 组装评委能访问的锁定版本及评分编辑状态。 */
     public Map<String, Object> judgeView(Actor actor, long id) {
         Map<String, Object> row = require(id);
         Map<String, Object> competition = competitions.require(number(row, "competitionId"));
@@ -65,24 +69,29 @@ public class ReviewService {
                 "judgingClosesAt", withOffset(competition, "judgingClosesAt"));
     }
 
+    /** 验证评审权限后返回匿名作品文件。 */
     public PdfAttachment judgeFile(Actor actor, long id) {
         Map<String, Object> assignment = require(id);
         requireJudgeAccess(actor, assignment, competitions.require(number(assignment, "competitionId")));
         return submissions.judgeFile(assignment);
     }
 
+    /** 列出符合角色、状态和利益冲突规则的候选评委。 */
     public List<Map<String, Object>> candidates(Actor actor, long id) {
         competitions.checkManager(actor, competitions.require(id));
         return mapper.candidateList(id);
     }
 
+    /** 验证赛事管理权后查询作品分派历史。 */
     public List<Map<String, Object>> assignments(Actor actor, long submissionId) {
         Map<String, Object> work = submissions.require(submissionId);
         competitions.checkManager(actor, competitions.require(number(work, "competitionId")));
         return mapper.listForSubmission(submissionId);
     }
 
+    /** 将报名作品的锁定版本分给有效且未冲突的评委。 */
     public Map<String, Object> assign(Actor actor, long id, long judgeId) {
+        // 第 1 步 校验赛事权限、分派窗口和评委利益冲突。
         long competitionId = number(submissions.require(id), "competitionId");
         Map<String, Object> competition = competitions.managedLock(actor, competitionId);
         LocalDateTime now = competitions.now();
@@ -91,6 +100,7 @@ public class ReviewService {
         if (judgeId == actor.id() || mapper.candidateList(competitionId).stream().noneMatch(judge -> number(judge, "id") == judgeId)) {
             throw WebProblem.conflict("该账户当前不能评审本届赛事。");
         }
+        // 第 2 步 锁定评审版本，在名额范围内写入分派。
         Map<String, Object> submission = submissions.lockFinal(id, competition);
         if (!"ELIGIBLE".equals(submission.get("eligibilityStatus"))) throw WebProblem.conflict("该作品已取消参评。");
         long versionId = number(submission, "lockedVersionId");
@@ -108,6 +118,7 @@ public class ReviewService {
         return mapper.find(number(values, "id"));
     }
 
+    /** 按版本校验后保存可编辑的评分草稿。 */
     public Map<String, Object> score(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> competition = competitions.lock(number(require(id), "competitionId"));
         Map<String, Object> assignment = mapper.lock(id);
@@ -123,6 +134,7 @@ public class ReviewService {
         return judgeView(actor, id);
     }
 
+    /** 校验维度评分齐全并正式提交。 */
     public Map<String, Object> submit(Actor actor, long id, Map<String, ?> values) {
         Map<String, Object> competition = competitions.lock(number(require(id), "competitionId"));
         Map<String, Object> assignment = mapper.lock(id);
@@ -136,6 +148,7 @@ public class ReviewService {
         return judgeView(actor, id);
     }
 
+    /** 记录评委回避并释放其名额。 */
     public Map<String, Object> recuse(Actor actor, long id, String reason) {
         Map<String, Object> competition = competitions.lock(number(require(id), "competitionId"));
         Map<String, Object> assignment = mapper.lock(id);
@@ -146,6 +159,7 @@ public class ReviewService {
         return fields("id", id, "status", "RECUSED");
     }
 
+    /** 由管理者撤销尚未正式提交的分派。 */
     public Map<String, Object> revoke(Actor actor, long id, String reason) {
         long competitionId = number(require(id), "competitionId");
         Map<String, Object> competition = competitions.managedLock(actor, competitionId);
@@ -157,6 +171,7 @@ public class ReviewService {
         return mapper.find(id);
     }
 
+    /** 保留旧评分审计并在评审期内恢复编辑。 */
     public Map<String, Object> reopen(Actor actor, long id, String reason) {
         long competitionId = number(require(id), "competitionId");
         Map<String, Object> competition = competitions.managedLock(actor, competitionId);
@@ -175,6 +190,7 @@ public class ReviewService {
         return mapper.find(id);
     }
 
+    /** 解析持久化评分中的各维度分值。 */
     public Map<String, BigDecimal> readScores(Map<String, ?> row) {
         try {
             return json.readValue(text(row, "criterionScores"), new TypeReference<Map<String, BigDecimal>>() {});
@@ -183,6 +199,7 @@ public class ReviewService {
         }
     }
 
+    /** 检查评分维度、范围和完整性，返回归一化分值。 */
     public Map<String, BigDecimal> validateScores(Object source, List<Map<String, Object>> criteria, boolean complete) {
         if (!(source instanceof Map<?, ?> input)) throw WebProblem.invalid("请填写评分。");
         Map<String, BigDecimal> scores = new TreeMap<>();
@@ -209,12 +226,14 @@ public class ReviewService {
         return scores;
     }
 
+    /** 按编号读取分派，缺失时返回相应错误。 */
     private Map<String, Object> require(long id) {
         Map<String, Object> assignment = mapper.find(id);
         if (assignment == null) throw WebProblem.missing();
         return assignment;
     }
 
+    /** 同时检查任务归属、分派状态与评审时间。 */
     private void requireScoring(Actor actor, Map<String, ?> assignment, Map<String, ?> competition) {
         requireJudgeAccess(actor, assignment, competition);
         requireReviewOpen(competition);
@@ -222,15 +241,18 @@ public class ReviewService {
         competitions.requireWindow(competition, "judgingOpensAt", "judgingClosesAt", competitions.now());
     }
 
+    /** 要求任务仍在等待正式评分。 */
     private static void requireAssigned(Map<String, ?> assignment) {
         if (!"ASSIGNED".equals(assignment.get("status"))) throw WebProblem.conflict("当前分派状态不可操作。");
     }
 
+    /** 要求评审相关写入尚未因结果发布而冻结。 */
     private void requireReviewOpen(Map<String, ?> competition) {
         competitions.requireOpen(competition);
         if (competition.get("currentPublicationId") != null) throw WebProblem.conflict("该赛事评分已冻结。");
     }
 
+    /** 校验评委、任务、作品参评资格和锁定版本。 */
     private static void requireJudgeAccess(Actor actor, Map<String, ?> row, Map<String, ?> competition) {
         if (actor.id() != number(row, "judgeId") || !Set.of("ASSIGNED", "SUBMITTED").contains(text(row, "status"))
                 || !"ELIGIBLE".equals(row.get("eligibilityStatus")) || !row.get("versionId").equals(row.get("lockedVersionId"))
