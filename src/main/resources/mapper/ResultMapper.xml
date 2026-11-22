@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jingxu.mapper.ResultMapper">
+    <select id="eligibleRegistrations" resultType="map">
+        SELECT r.id AS registrationId, r.registration_no AS registrationNo, r.team_display_name AS teamDisplayName,
+            s.id AS submissionId, s.anonymous_code AS anonymousCode, s.eligibility_status AS eligibilityStatus,
+            s.eligibility_reason AS eligibilityReason, s.locked_version_id AS lockedVersionId,
+            COALESCE(v.title, (SELECT t.title FROM submission_version t WHERE t.submission_id=s.id
+                ORDER BY t.version_no DESC LIMIT 1)) AS title
+        FROM registration r LEFT JOIN submission s ON s.registration_id=r.id
+        LEFT JOIN submission_version v ON v.id=s.locked_version_id
+        WHERE r.competition_id=#{competitionId} AND r.status='APPROVED' ORDER BY r.id
+    </select>
+    <sql id="batchFields">
+        p.id, p.competition_id AS competitionId, p.version_no AS versionNo, p.publication_type AS publicationType,
+        p.published_at AS publishedAt, p.published_by AS publishedBy, p.no_awards AS noAwards,
+        p.correction_reason AS correctionReason, p.id=c.current_publication_id AS currentBatch
+    </sql>
+    <select id="batches" resultType="map">
+        SELECT <include refid="batchFields"/> FROM result_publication p JOIN competition c ON c.id=p.competition_id
+        WHERE p.competition_id=#{competitionId} ORDER BY p.version_no DESC
+    </select>
+    <select id="batch" resultType="map">
+        SELECT <include refid="batchFields"/>, p.scoring_basis AS scoringBasis
+        FROM result_publication p JOIN competition c ON c.id=p.competition_id
+        WHERE p.competition_id=#{competitionId} AND p.id=#{publicationId}
+    </select>
+    <select id="request" resultType="map">
+        SELECT id, request_hash AS requestHash FROM result_publication
+        WHERE competition_id=#{competitionId} AND request_id=#{requestId}
+    </select>
+    <select id="entries" resultType="map">
+        SELECT registration_id AS registrationId, work_title_snapshot AS workTitle, entry_display_snapshot AS entryDisplay,
+            outcome_status AS outcomeStatus, outcome_reason AS outcomeReason, CAST(total_score AS CHAR) AS totalScore,
+            rank_no AS rankNo, award_name AS awardName, recipient_names_snapshot AS recipientNames
+        FROM competition_result WHERE publication_id=#{publicationId} ORDER BY rank_no IS NULL, rank_no, registration_id
+    </select>
+    <insert id="insertBatch" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO result_publication(competition_id, version_no, published_by, published_at, correction_reason,
+            publication_type, no_awards, request_id, request_hash, scoring_basis)
+        VALUES(#{competitionId}, #{versionNo}, #{actorId}, #{now}, #{reason}, #{mode}, #{noAwards}, #{requestId}, #{requestHash}, #{basis})
+    </insert>
+    <insert id="insertEntry">
+        INSERT INTO competition_result(publication_id, registration_id, competition_id,
+            work_title_snapshot, entry_display_snapshot, outcome_status, outcome_reason, total_score, rank_no, award_name,
+            recipient_names_snapshot)
+        VALUES(#{publicationId}, #{registrationId}, #{competitionId}, #{workTitle}, #{entryDisplay},
+            #{outcomeStatus}, #{outcomeReason}, #{totalScore}, #{rankNo}, #{awardName}, #{recipientNamesJson})
+    </insert>
+    <update id="selectBatch">
+        UPDATE competition SET current_publication_id=#{publicationId}, row_version=row_version+1 WHERE id=#{competitionId}
+    </update>
+</mapper>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jingxu.mapper.SubmissionMapper">
+    <sql id="submissionFields">
+        s.id, s.registration_id AS registrationId, s.anonymous_code AS anonymousCode,
+        s.locked_version_id AS lockedVersionId, s.locked_at AS lockedAt, r.competition_id AS competitionId,
+        s.eligibility_status AS eligibilityStatus, s.eligibility_reason AS eligibilityReason, s.row_version AS rowVersion
+    </sql>
+    <select id="find" resultType="map">
+        SELECT <include refid="submissionFields"/> FROM submission s JOIN registration r ON r.id = s.registration_id WHERE s.id = #{id}
+    </select>
+    <select id="forRegistration" resultType="map">
+        SELECT <include refid="submissionFields"/> FROM submission s JOIN registration r ON r.id = s.registration_id WHERE s.registration_id = #{id}
+    </select>
+    <select id="lock" resultType="map">
+        SELECT <include refid="submissionFields"/> FROM submission s JOIN registration r ON r.id = s.registration_id WHERE s.id = #{id} FOR UPDATE
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO submission(registration_id, anonymous_code) VALUES(#{registrationId}, #{anonymousCode})
+    </insert>
+    <sql id="versionFields">
+        id, submission_id AS submissionId, version_no AS versionNo, request_id AS requestId, request_hash AS requestHash,
+        title, storage_key AS storageKey, submitted_at AS submittedAt
+    </sql>
+    <select id="versions" resultType="map">
+        SELECT <include refid="versionFields"/> FROM submission_version WHERE submission_id = #{id} ORDER BY version_no DESC
+    </select>
+    <select id="version" resultType="map">
+        SELECT <include refid="versionFields"/> FROM submission_version WHERE submission_id = #{id} AND version_no = #{version}
+    </select>
+    <select id="versionById" resultType="map">
+        SELECT <include refid="versionFields"/> FROM submission_version WHERE id = #{id}
+    </select>
+    <select id="latest" resultType="map">
+        SELECT <include refid="versionFields"/> FROM submission_version WHERE submission_id = #{id} ORDER BY version_no DESC LIMIT 1
+    </select>
+    <select id="request" resultType="map">
+        SELECT <include refid="versionFields"/> FROM submission_version WHERE submission_id = #{id} AND request_id = #{requestId}
+    </select>
+    <insert id="addVersion">
+        INSERT INTO submission_version(submission_id, version_no, request_id, request_hash, title,
+            storage_key, file_sha256, submitted_by, submitted_at)
+        VALUES(#{id}, #{versionNo}, #{requestId}, #{requestHash}, #{title}, #{storageKey}, #{fileSha256}, #{actorId}, #{now})
+    </insert>
+    <update id="lockVersion">
+        UPDATE submission SET locked_version_id = #{versionId}, locked_at = #{now}, row_version = row_version + 1
+        WHERE id = #{id} AND locked_version_id IS NULL
+    </update>
+    <update id="eligibility">
+        UPDATE submission SET eligibility_status = #{status}, eligibility_reason = #{reason}, row_version = row_version + 1 WHERE id = #{id}
+    </update>
+    <sql id="workFilter">
+        WHERE r.competition_id = #{competitionId} AND r.status = 'APPROVED'
+        <if test="q != ''">AND (LOCATE(#{q}, r.registration_no) &gt; 0 OR LOCATE(#{q}, IFNULL(s.anonymous_code,'')) &gt; 0)</if>
+        <if test="state == 'NO_WORK'">AND s.id IS NULL</if>
+        <if test="state == 'ELIGIBLE' or state == 'EXCLUDED'">AND s.eligibility_status = #{state}</if>
+    </sql>
+    <select id="workList" resultType="map">
+        SELECT s.id, r.id AS registrationId, r.competition_id AS competitionId, s.anonymous_code AS anonymousCode,
+            s.locked_version_id AS lockedVersionId, s.locked_at AS lockedAt, s.eligibility_status AS eligibilityStatus,
+            s.eligibility_reason AS eligibilityReason, s.row_version AS rowVersion,
+            r.registration_no AS registrationNo, r.team_display_name AS teamDisplayName,
+            (SELECT v.title FROM submission_version v WHERE v.submission_id = s.id ORDER BY v.version_no DESC LIMIT 1) AS latestTitle,
+            (SELECT COUNT(*) FROM review_assignment a WHERE a.submission_version_id = s.locked_version_id AND a.status = 'SUBMITTED') AS scored
+        FROM registration r LEFT JOIN submission s ON s.registration_id = r.id
+        <include refid="workFilter"/> ORDER BY r.id DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="workCount" resultType="long">
+        SELECT COUNT(*) FROM registration r LEFT JOIN submission s ON s.registration_id = r.id <include refid="workFilter"/>
+    </select>
+</mapper>

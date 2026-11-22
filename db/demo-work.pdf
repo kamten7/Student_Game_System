@@ -1,0 +1,64 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [3 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 691 >>
+stream
+0.08 0.24 0.19 rg
+46 738 503 4 re f
+BT
+/F1 24 Tf
+46 699 Td
+(Campus Competition Sample) Tj
+/F1 12 Tf
+0 -31 Td
+(Project proposal for the local judging workflow) Tj
+0 -24 Td
+() Tj
+0 -23 Td
+(01  Problem) Tj
+0 -23 Td
+(Students have difficulty finding open study spaces during peak hours.) Tj
+0 -23 Td
+() Tj
+0 -23 Td
+(02  Proposal) Tj
+0 -23 Td
+(Publish opt-in, anonymous occupancy summaries in each building.) Tj
+0 -23 Td
+(Pilot the proposal in one library zone before expanding.) Tj
+0 -23 Td
+() Tj
+0 -23 Td
+(03  Evaluation) Tj
+0 -23 Td
+(Compare waiting time and reported seat availability before and after.) Tj
+0 -23 Td
+(The sample contains no student names or school identifiers.) Tj
+0 -23 Td
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Root 1 0 R /Size 6 >>
+startxref
+1053
+%%EOF

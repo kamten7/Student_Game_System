@@ -1,0 +1,4 @@
+</main>
+<c:if test="${not empty area}"></div></c:if>
+</body>
+</html>

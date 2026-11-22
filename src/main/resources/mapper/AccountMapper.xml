@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jingxu.mapper.AccountMapper">
+    <sql id="accountFields">
+        a.id, a.username, a.status, p.full_name AS fullName, p.claimed_student_no AS claimedStudentNo,
+        p.student_no AS studentNo, p.department, p.major, p.verification_status AS verificationStatus
+    </sql>
+    <select id="credentials" resultType="map">
+        SELECT id, username, password_hash AS passwordHash FROM user_account WHERE username = #{username} AND status = 'ACTIVE'
+    </select>
+    <select id="activeAccount" resultType="map">
+        SELECT id, username FROM user_account WHERE id = #{id} AND status = 'ACTIVE'
+    </select>
+    <select id="account" resultType="map">
+        SELECT <include refid="accountFields"/>, p.invite_code AS inviteCode
+        FROM user_account a LEFT JOIN student_profile p ON p.user_id = a.id WHERE a.id = #{id}
+    </select>
+    <select id="roles" resultType="string">
+        SELECT r.role_code FROM role r JOIN user_role ur ON ur.role_id = r.id WHERE ur.user_id = #{id} ORDER BY r.role_code
+    </select>
+    <select id="lockAdminRole" resultType="long">
+        SELECT id FROM role WHERE role_code = 'ADMIN' FOR UPDATE
+    </select>
+    <select id="activeAdmins" resultType="int">
+        SELECT COUNT(*) FROM user_account a JOIN user_role ur ON ur.user_id = a.id
+        JOIN role r ON r.id = ur.role_id WHERE a.status = 'ACTIVE' AND r.role_code = 'ADMIN'
+    </select>
+    <insert id="insertAccount" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_account(username, password_hash) VALUES(#{username}, #{hash})
+    </insert>
+    <insert id="insertProfile">
+        INSERT INTO student_profile(user_id, claimed_student_no, full_name, department, major)
+        VALUES(#{id}, #{claimedStudentNo}, #{fullName}, #{department}, #{major})
+    </insert>
+    <insert id="addRole">
+        INSERT INTO user_role(user_id, role_id) SELECT #{id}, id FROM role WHERE role_code = #{role}
+    </insert>
+    <delete id="removeRoles">DELETE FROM user_role WHERE user_id = #{id}</delete>
+    <update id="updateAccount">
+        UPDATE user_account SET status = #{status}, deleted_at = #{deletedAt} WHERE id = #{id}
+    </update>
+    <update id="updateProfile">
+        UPDATE student_profile SET department = #{department}, major = #{major},
+        full_name = CASE WHEN verification_status = 'VERIFIED' THEN full_name ELSE #{fullName} END
+        WHERE user_id = #{id}
+    </update>
+    <update id="verifyProfile">
+        UPDATE student_profile SET student_no = #{studentNo}, full_name = #{fullName}, verification_status = #{status},
+        verified_by = #{actorId}, verified_at = #{now}, invite_code = #{inviteCode} WHERE user_id = #{id}
+    </update>
+    <update id="rotateInvite">
+        UPDATE student_profile SET invite_code = #{inviteCode} WHERE user_id = #{id} AND verification_status = 'VERIFIED'
+    </update>
+    <sql id="accountFilter">
+        <where>
+            <if test="q != ''">AND LOCATE(#{q}, a.username) &gt; 0</if>
+            <if test="status != ''">AND a.status = #{status}</if>
+            <if test="verificationStatus != ''">AND p.verification_status = #{verificationStatus}</if>
+            <if test="role != ''">AND EXISTS (SELECT 1 FROM user_role ur JOIN role r ON r.id = ur.role_id
+                WHERE ur.user_id = a.id AND r.role_code = #{role})</if>
+        </where>
+    </sql>
+    <select id="listAccounts" resultType="map">
+        SELECT <include refid="accountFields"/> FROM user_account a LEFT JOIN student_profile p ON p.user_id = a.id
+        <include refid="accountFilter"/> ORDER BY a.id DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="countAccounts" resultType="long">
+        SELECT COUNT(*) FROM user_account a LEFT JOIN student_profile p ON p.user_id = a.id <include refid="accountFilter"/>
+    </select>
+    <insert id="audit">
+        INSERT INTO audit_log(actor_id, action, target_type, target_key, change_summary, created_at)
+        VALUES(#{actorId}, #{action}, #{type}, #{target}, #{summary}, #{now})
+    </insert>
+    <sql id="auditFilter">
+        <where>
+            <if test="type != ''">AND l.target_type = #{type}</if>
+            <if test="target != ''">AND l.target_key = #{target}</if>
+            <if test="action != ''">AND l.action = #{action}</if>
+            <if test="actorId != null">AND l.actor_id = #{actorId}</if>
+            <if test="from != null">AND l.created_at &gt;= #{from}</if>
+            <if test="to != null">AND l.created_at &lt; #{to}</if>
+        </where>
+    </sql>
+    <select id="listAudit" resultType="map">
+        SELECT l.id, l.actor_id AS actorId, l.action, l.target_type AS targetType, l.target_key AS targetKey,
+            l.change_summary AS changeSummary, l.created_at AS createdAt, actor.username AS actorName,
+            COALESCE(c.name, account.username) AS targetName, p.version_no AS publicationVersion,
+            p.correction_reason AS publicationReason
+        FROM audit_log l
+        LEFT JOIN user_account actor ON actor.id = l.actor_id
+        LEFT JOIN competition c ON c.id = CASE WHEN l.target_type = 'COMPETITION'
+            AND l.target_key REGEXP '^[0-9]{1,19}$' THEN CAST(l.target_key AS UNSIGNED) END
+        LEFT JOIN user_account account ON account.id = CASE WHEN l.target_type = 'ACCOUNT'
+            AND l.target_key REGEXP '^[0-9]{1,19}$' THEN CAST(l.target_key AS UNSIGNED) END
+        LEFT JOIN result_publication p ON p.competition_id = c.id AND p.id = CASE
+            WHEN l.action IN ('RESULT_FIRST','RESULT_CORRECTION')
+             AND JSON_TYPE(JSON_EXTRACT(l.change_summary, '$.publicationId')) = 'INTEGER'
+            THEN CAST(l.change_summary -&gt;&gt; '$.publicationId' AS UNSIGNED) END
+        <include refid="auditFilter"/> ORDER BY l.created_at DESC, l.id DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="countAudit" resultType="long">SELECT COUNT(*) FROM audit_log l <include refid="auditFilter"/></select>
+</mapper>

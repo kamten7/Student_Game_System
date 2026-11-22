@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jingxu.mapper.RegistrationMapper">
+    <sql id="fields">
+        r.id, r.registration_no AS registrationNo, r.competition_id AS competitionId, r.captain_id AS captainId,
+        r.team_display_name AS teamDisplayName, r.status, r.row_version AS rowVersion, r.submitted_at AS submittedAt
+    </sql>
+    <select id="find" resultType="map">SELECT <include refid="fields"/> FROM registration r WHERE r.id = #{id}</select>
+    <select id="lock" resultType="map">SELECT <include refid="fields"/> FROM registration r WHERE r.id = #{id} FOR UPDATE</select>
+    <sql id="filter">
+        <where>
+            <if test="competitionId != null">AND r.competition_id = #{competitionId}</if>
+            <if test="studentId != null">AND EXISTS (SELECT 1 FROM registration_member m
+                WHERE m.registration_id = r.id AND m.student_id = #{studentId} AND m.invitation_status = 'CONFIRMED')</if>
+            <if test="admin">AND r.status != 'DRAFT'</if>
+            <if test="status != ''">AND r.status = #{status}</if>
+            <if test="registrationNo != ''">AND r.registration_no = #{registrationNo}</if>
+            <if test="q != ''">AND (LOCATE(#{q}, IFNULL(r.team_display_name, '')) &gt; 0 OR LOCATE(#{q}, c.name) &gt; 0)</if>
+        </where>
+    </sql>
+    <select id="list" resultType="map">
+        SELECT <include refid="fields"/>, c.name AS competitionName, c.entry_mode AS entryMode,
+            c.registration_closes_at AS registrationClosesAt, c.correction_closes_at AS correctionClosesAt,
+            c.submission_closes_at AS submissionClosesAt, c.current_publication_id IS NOT NULL AS hasResult
+        FROM registration r JOIN competition c ON c.id = r.competition_id
+        <include refid="filter"/> ORDER BY r.id DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM registration r JOIN competition c ON c.id = r.competition_id <include refid="filter"/>
+    </select>
+    <select id="members" resultType="map">
+        SELECT m.student_id AS studentId, m.is_captain AS isCaptain, m.invitation_status AS invitationStatus,
+            p.full_name AS fullName, p.verification_status AS verificationStatus, a.status AS accountStatus,
+            EXISTS(SELECT 1 FROM user_role ur JOIN role ro ON ro.id = ur.role_id
+                WHERE ur.user_id = a.id AND ro.role_code = 'STUDENT') AS studentRole
+        FROM registration_member m JOIN student_profile p ON p.user_id = m.student_id
+        JOIN user_account a ON a.id = m.student_id WHERE m.registration_id = #{id}
+        ORDER BY m.is_captain DESC, m.student_id
+    </select>
+    <select id="history" resultType="map">
+        SELECT id, actor_id AS actorId, from_status AS fromStatus, to_status AS toStatus, reason,
+            roster_snapshot AS rosterSnapshot, created_at AS createdAt
+        FROM registration_review_log WHERE registration_id = #{id} ORDER BY created_at DESC, id DESC
+    </select>
+    <select id="invitations" resultType="map">
+        SELECT r.id AS registrationId, r.registration_no AS registrationNo, r.team_display_name AS teamDisplayName,
+            c.name AS competitionName, m.invitation_status AS invitationStatus
+        FROM registration_member m JOIN registration r ON r.id = m.registration_id
+        JOIN competition c ON c.id = r.competition_id
+        WHERE m.student_id = #{studentId} AND m.is_captain = FALSE AND m.invitation_status IN ('INVITED','CONFIRMED','DECLINED')
+        ORDER BY r.id DESC
+    </select>
+    <select id="inviteRecipient" resultType="long">
+        SELECT p.user_id FROM student_profile p JOIN user_account a ON a.id = p.user_id
+        WHERE p.invite_code = #{code} AND p.verification_status = 'VERIFIED' AND a.status = 'ACTIVE'
+        AND EXISTS(SELECT 1 FROM user_role ur JOIN role ro ON ro.id = ur.role_id WHERE ur.user_id = p.user_id AND ro.role_code='STUDENT')
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO registration(registration_no, competition_id, captain_id, team_display_name)
+        VALUES(#{registrationNo}, #{competitionId}, #{captainId}, #{teamDisplayName})
+    </insert>
+    <insert id="addMember">
+        INSERT INTO registration_member(registration_id, student_id, is_captain, invitation_status, confirmed_at)
+        VALUES(#{id}, #{studentId}, #{captain}, #{status}, #{confirmedAt})
+    </insert>
+    <update id="changeMember">
+        UPDATE registration_member SET invitation_status = #{status}, confirmed_at = #{confirmedAt}
+        WHERE registration_id = #{id} AND student_id = #{studentId} AND is_captain = FALSE
+    </update>
+    <delete id="purgeDraftMembers">DELETE FROM registration_member WHERE registration_id = #{id}</delete>
+    <delete id="deleteDraft">DELETE FROM registration WHERE id = #{id} AND status = 'DRAFT'</delete>
+    <update id="rename">
+        UPDATE registration SET team_display_name = #{name}, row_version = row_version + 1 WHERE id = #{id}
+    </update>
+    <update id="advance">
+        UPDATE registration SET status = #{status}, row_version = row_version + 1,
+            submitted_at = COALESCE(#{submittedAt}, submitted_at) WHERE id = #{id}
+    </update>
+    <update id="bump">UPDATE registration SET row_version = row_version + 1 WHERE id = #{id}</update>
+    <delete id="release">DELETE FROM participation_claim WHERE registration_id = #{id}</delete>
+    <insert id="claim">
+        INSERT INTO participation_claim(competition_id, student_id, registration_id, claimed_at)
+        VALUES(#{competitionId}, #{studentId}, #{id}, #{now})
+    </insert>
+    <insert id="log">
+        INSERT INTO registration_review_log(registration_id, actor_id, from_status, to_status, reason, roster_snapshot, created_at)
+        VALUES(#{id}, #{actorId}, #{from}, #{to}, #{reason}, #{snapshot}, #{now})
+    </insert>
+    <select id="dueCompetitions" resultType="long">
+        SELECT DISTINCT c.id FROM competition c JOIN registration r ON r.competition_id = c.id
+        WHERE c.status = 'PUBLISHED' AND c.qualification_closes_at &lt;= #{now}
+        AND r.status IN ('PENDING','CHANGES_REQUESTED') ORDER BY c.id
+    </select>
+    <select id="unsettled" resultType="map">
+        SELECT <include refid="fields"/> FROM registration r WHERE r.competition_id = #{competitionId}
+        AND r.status IN ('PENDING','CHANGES_REQUESTED') ORDER BY r.id FOR UPDATE
+    </select>
+    <select id="currentResult" resultType="map">
+        SELECT x.outcome_status AS outcomeStatus, x.outcome_reason AS outcomeReason,
+            CAST(x.total_score AS CHAR) AS totalScore, x.rank_no AS rankNo, x.award_name AS awardName,
+            x.work_title_snapshot AS workTitle
+        FROM registration r JOIN competition c ON c.id = r.competition_id
+        JOIN competition_result x ON x.publication_id = c.current_publication_id AND x.registration_id = r.id
+        WHERE r.id = #{id}
+    </select>
+</mapper>

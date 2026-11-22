@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/tx https://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/task https://www.springframework.org/schema/task/spring-task.xsd">
+    <context:component-scan base-package="org.jingxu.service"/>
+    <tx:annotation-driven/>
+    <task:annotation-driven/>
+    <bean id="clock" class="java.time.Clock" factory-method="systemUTC"/>
+    <bean id="passwordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder"/>
+    <bean id="objectMapper" class="org.jingxu.util.JsonSupport" factory-method="create"/>
+</beans>

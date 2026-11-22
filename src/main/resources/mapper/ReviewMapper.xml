@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jingxu.mapper.ReviewMapper">
+    <select id="candidateList" resultType="map">
+        SELECT a.id, a.username FROM user_account a JOIN user_role ur ON ur.user_id = a.id
+        JOIN role ro ON ro.id = ur.role_id AND ro.role_code = 'JUDGE' JOIN competition c ON c.id = #{competitionId}
+        WHERE a.status='ACTIVE' AND a.id != c.organizer_id
+        AND NOT EXISTS (SELECT 1 FROM participation_claim p WHERE p.competition_id=c.id AND p.student_id=a.id)
+        AND NOT EXISTS (SELECT 1 FROM audit_log l WHERE l.actor_id=a.id AND l.target_type='COMPETITION' AND l.target_key=CAST(c.id AS CHAR))
+        ORDER BY a.username, a.id
+    </select>
+    <sql id="assignmentFields">
+        a.id, a.submission_version_id AS versionId, a.judge_id AS judgeId, a.status, a.reason, a.assigned_at AS assignedAt,
+        v.version_no AS versionNo, s.id AS submissionId, s.locked_version_id AS lockedVersionId,
+        s.eligibility_status AS eligibilityStatus, s.anonymous_code AS anonymousCode, r.competition_id AS competitionId
+    </sql>
+    <sql id="assignmentJoins">
+        FROM review_assignment a JOIN submission_version v ON v.id=a.submission_version_id
+        JOIN submission s ON s.id=v.submission_id JOIN registration r ON r.id=s.registration_id
+    </sql>
+    <select id="find" resultType="map">
+        SELECT <include refid="assignmentFields"/> <include refid="assignmentJoins"/> WHERE a.id=#{id}
+    </select>
+    <select id="lock" resultType="map">
+        SELECT <include refid="assignmentFields"/> <include refid="assignmentJoins"/> WHERE a.id=#{id} FOR UPDATE
+    </select>
+    <select id="byJudgeAndVersion" resultType="map">
+        SELECT id, status FROM review_assignment WHERE submission_version_id=#{versionId} AND judge_id=#{judgeId}
+    </select>
+    <select id="activeCount" resultType="int">
+        SELECT COUNT(*) FROM review_assignment WHERE submission_version_id=#{versionId} AND status IN ('ASSIGNED','SUBMITTED')
+    </select>
+    <insert id="insertAssignment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO review_assignment(submission_version_id, judge_id, assigned_at) VALUES(#{versionId}, #{judgeId}, #{now})
+    </insert>
+    <update id="changeAssignment">
+        UPDATE review_assignment SET status=#{status}, reason=#{reason} WHERE id=#{id}
+    </update>
+    <select id="listForSubmission" resultType="map">
+        SELECT <include refid="assignmentFields"/>, u.username
+        <include refid="assignmentJoins"/> JOIN user_account u ON u.id=a.judge_id WHERE s.id=#{submissionId} ORDER BY a.id
+    </select>
+    <sql id="judgeFilter">
+        WHERE a.judge_id=#{judgeId} AND c.status IN ('PUBLISHED','ARCHIVED')
+        <if test="competitionId != null">AND c.id=#{competitionId}</if>
+        <if test="status != ''">AND a.status=#{status}</if>
+    </sql>
+    <select id="judgeList" resultType="map">
+        SELECT a.id, a.status, s.anonymous_code AS anonymousCode, s.eligibility_status AS eligibilityStatus,
+            v.version_no AS versionNo, c.name AS competitionName, c.judging_closes_at AS judgingClosesAt
+        <include refid="assignmentJoins"/> JOIN competition c ON c.id=r.competition_id
+        <include refid="judgeFilter"/> ORDER BY c.judging_closes_at, a.id LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="judgeCount" resultType="long">
+        SELECT COUNT(*) <include refid="assignmentJoins"/> JOIN competition c ON c.id=r.competition_id <include refid="judgeFilter"/>
+    </select>
+    <select id="score" resultType="map">
+        SELECT assignment_id AS assignmentId, criterion_scores AS criterionScores, feedback,
+            row_version AS rowVersion, submitted_at AS submittedAt FROM review_score WHERE assignment_id=#{id}
+    </select>
+    <insert id="insertScore">
+        INSERT INTO review_score(assignment_id, criterion_scores, feedback, row_version) VALUES(#{id}, #{scores}, #{feedback}, 1)
+    </insert>
+    <update id="saveScore">
+        UPDATE review_score SET criterion_scores=#{scores}, feedback=#{feedback}, row_version=row_version+1 WHERE assignment_id=#{id}
+    </update>
+    <update id="finishScore">
+        UPDATE review_score SET submitted_at=#{now}, row_version=row_version+1 WHERE assignment_id=#{id}
+    </update>
+    <select id="activeScores" resultType="map">
+        SELECT a.id AS assignmentId, b.criterion_scores AS criterionScores, b.row_version AS rowVersion
+        FROM review_assignment a JOIN review_score b ON b.assignment_id=a.id
+        WHERE a.submission_version_id=#{versionId} AND a.status='SUBMITTED' AND b.submitted_at IS NOT NULL
+        ORDER BY a.id
+    </select>
+</mapper>

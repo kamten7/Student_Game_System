@@ -1,0 +1,23 @@
+<c:choose>
+    <c:when test="${empty awards}"><p class="empty">本届赛事没有获奖条目。</p></c:when>
+    <c:otherwise>
+        <ul class="award-list">
+            <c:forEach var="winner" items="${awards}">
+                <li class="award-list-row">
+                    <div class="award-rank"><span>第</span><strong>${winner.rankNo}</strong><span>名</span></div>
+                    <div class="award-work">
+                        <strong><c:out value="${winner.workTitle}"/></strong>
+                        <span class="muted"><c:out value="${winner.entryDisplay}"/></span>
+                    </div>
+                    <c:if test="${not empty winner.recipientNames}">
+                        <div class="award-people">
+                            <span class="muted">获奖人员</span>
+                            <strong><c:forEach var="recipient" items="${winner.recipientNames}" varStatus="position"><c:if test="${not position.first}">、</c:if><c:out value="${recipient}"/></c:forEach></strong>
+                        </div>
+                    </c:if>
+                    <span class="award-prize"><c:out value="${winner.awardName}"/></span>
+                </li>
+            </c:forEach>
+        </ul>
+    </c:otherwise>
+</c:choose>

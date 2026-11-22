@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jingxu.mapper.CompetitionMapper">
+    <sql id="dates">
+        registration_opens_at AS registrationOpensAt, registration_closes_at AS registrationClosesAt,
+        correction_closes_at AS correctionClosesAt, qualification_closes_at AS qualificationClosesAt,
+        submission_opens_at AS submissionOpensAt, submission_closes_at AS submissionClosesAt,
+        judging_opens_at AS judgingOpensAt, judging_closes_at AS judgingClosesAt
+    </sql>
+    <sql id="fields">
+        id, competition_no AS competitionNo, name, edition, rules_text AS rulesText,
+        organizer_id AS organizerId, entry_mode AS entryMode, min_team_size AS minTeamSize, max_team_size AS maxTeamSize,
+        <include refid="dates"/>, scoring_rubric AS scoringRubric, required_judges AS requiredJudges,
+        status, row_version AS rowVersion, cancellation_reason AS cancellationReason, current_publication_id AS currentPublicationId
+    </sql>
+    <sql id="phase">
+        CASE WHEN status = 'DRAFT' THEN 'DRAFT'
+             WHEN status = 'CANCELLED' THEN 'CANCELLED'
+             WHEN current_publication_id IS NOT NULL THEN 'RESULTS'
+             WHEN #{now} &lt; registration_opens_at THEN 'UPCOMING'
+             WHEN #{now} &lt; registration_closes_at THEN 'REGISTRATION'
+             WHEN #{now} &lt; qualification_closes_at THEN 'QUALIFICATION'
+             WHEN #{now} &lt; submission_opens_at THEN 'AWAITING_SUBMISSION'
+             WHEN #{now} &lt; submission_closes_at THEN 'SUBMISSION'
+             WHEN #{now} &lt; judging_opens_at THEN 'AWAITING_JUDGING'
+             WHEN #{now} &lt; judging_closes_at THEN 'JUDGING' ELSE 'AWAITING_RESULTS' END
+    </sql>
+    <sql id="filter">
+        <where>
+            <if test="publicOnly">AND status != 'DRAFT'</if>
+            <if test="organizerId != null">AND organizer_id = #{organizerId}</if>
+            <if test="mode != ''">AND entry_mode = #{mode}</if>
+            <if test="q != ''">AND LOCATE(#{q}, name) &gt; 0</if>
+            <if test="phase != ''">AND <include refid="phase"/> = #{phase}</if>
+        </where>
+    </sql>
+    <select id="list" resultType="map">
+        SELECT <include refid="fields"/>, <include refid="phase"/> AS phase
+        FROM competition <include refid="filter"/>
+        ORDER BY registration_closes_at ASC, id ASC LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="count" resultType="long">SELECT COUNT(*) FROM competition <include refid="filter"/></select>
+    <select id="find" resultType="map">SELECT <include refid="fields"/> FROM competition WHERE id = #{id}</select>
+    <select id="lock" resultType="map">SELECT <include refid="fields"/> FROM competition WHERE id = #{id} FOR UPDATE</select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO competition(competition_no, name, edition, rules_text, organizer_id, entry_mode,
+            min_team_size, max_team_size, registration_opens_at, registration_closes_at, correction_closes_at,
+            qualification_closes_at, submission_opens_at, submission_closes_at, judging_opens_at, judging_closes_at,
+            scoring_rubric, required_judges)
+        VALUES(#{competitionNo}, #{name}, #{edition}, #{rulesText}, #{organizerId}, #{entryMode},
+            #{minTeamSize}, #{maxTeamSize}, #{registrationOpensAt}, #{registrationClosesAt}, #{correctionClosesAt},
+            #{qualificationClosesAt}, #{submissionOpensAt}, #{submissionClosesAt}, #{judgingOpensAt}, #{judgingClosesAt},
+            #{scoringRubric}, #{requiredJudges})
+    </insert>
+    <sql id="setDates">
+        registration_opens_at = #{registrationOpensAt}, registration_closes_at = #{registrationClosesAt},
+        correction_closes_at = #{correctionClosesAt}, qualification_closes_at = #{qualificationClosesAt},
+        submission_opens_at = #{submissionOpensAt}, submission_closes_at = #{submissionClosesAt},
+        judging_opens_at = #{judgingOpensAt}, judging_closes_at = #{judgingClosesAt}
+    </sql>
+    <update id="updateDraft">
+        UPDATE competition SET name = #{name}, edition = #{edition}, rules_text = #{rulesText}, entry_mode = #{entryMode},
+            min_team_size = #{minTeamSize}, max_team_size = #{maxTeamSize}, <include refid="setDates"/>,
+            scoring_rubric = #{scoringRubric}, required_judges = #{requiredJudges}, row_version = row_version + 1
+        WHERE id = #{id}
+    </update>
+    <update id="updateSchedule">
+        UPDATE competition SET <include refid="setDates"/>, row_version = row_version + 1 WHERE id = #{id}
+    </update>
+    <update id="updateState">
+        UPDATE competition SET status = #{status}, cancellation_reason = #{reason}, row_version = row_version + 1
+        WHERE id = #{id}
+    </update>
+    <delete id="deleteDraft">DELETE FROM competition WHERE id = #{id} AND status = 'DRAFT'</delete>
+    <select id="judgeInvolved" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM review_assignment a JOIN submission_version v ON v.id = a.submission_version_id
+            JOIN submission s ON s.id = v.submission_id JOIN registration r ON r.id = s.registration_id
+            WHERE r.competition_id = #{competitionId} AND a.judge_id = #{actorId} AND a.status IN ('ASSIGNED','SUBMITTED'))
+    </select>
+    <select id="overview" resultType="map">
+        SELECT COUNT(CASE WHEN r.submitted_at IS NOT NULL THEN 1 END) AS registrations,
+            COUNT(CASE WHEN r.status = 'APPROVED' THEN 1 END) AS approved,
+            COUNT(s.id) AS submissions,
+            COUNT(CASE WHEN r.status = 'APPROVED' AND s.id IS NULL THEN 1 END) AS missing,
+            COUNT(CASE WHEN s.eligibility_status='ELIGIBLE' AND (
+                SELECT COUNT(*) FROM review_assignment a WHERE a.submission_version_id = s.locked_version_id
+                    AND a.status = 'SUBMITTED') = c.required_judges THEN 1 END) AS scored
+        FROM competition c LEFT JOIN registration r ON r.competition_id = c.id
+        LEFT JOIN submission s ON s.registration_id = r.id WHERE c.id = #{id}
+    </select>
+    <select id="announcement" resultType="map">
+        SELECT p.id AS publicationId, p.version_no AS versionNo, p.no_awards AS noAwards, p.published_at AS publishedAt
+        FROM competition c JOIN result_publication p ON p.id = c.current_publication_id
+        WHERE c.id = #{id} AND c.status IN ('PUBLISHED','ARCHIVED')
+    </select>
+    <sql id="visibleAnnouncements">
+        FROM competition c JOIN result_publication p ON p.id = c.current_publication_id
+        WHERE c.status IN ('PUBLISHED','ARCHIVED')
+    </sql>
+    <select id="announcements" resultType="map">
+        SELECT p.id AS publicationId, c.id AS competitionId, c.name, c.entry_mode AS entryMode,
+            p.published_at AS publishedAt, p.no_awards AS noAwards
+        <include refid="visibleAnnouncements"/>
+        ORDER BY p.no_awards, p.published_at DESC, p.id DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="countAnnouncements" resultType="long">
+        SELECT COUNT(*) <include refid="visibleAnnouncements"/>
+    </select>
+    <select id="awards" resultType="map">
+        SELECT r.publication_id AS publicationId, r.work_title_snapshot AS workTitle, r.entry_display_snapshot AS entryDisplay,
+            r.rank_no AS rankNo, r.award_name AS awardName, r.recipient_names_snapshot AS recipientNames
+        FROM competition_result r
+        WHERE r.outcome_status = 'RANKED' AND r.award_name IS NOT NULL AND r.publication_id IN
+        <foreach collection="list" item="publicationId" open="(" separator="," close=")">#{publicationId}</foreach>
+        ORDER BY r.publication_id, r.rank_no, r.registration_id
+    </select>
+</mapper>
