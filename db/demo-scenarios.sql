@@ -1,3 +1,4 @@
+-- 补充各赛事阶段的合成案例，覆盖组队、交件、评审和发布。
 -- 第 1 步 定义合成账号和赛程，以首次导入时刻为基准。
 USE student_game_system;
 SET NAMES utf8mb4;

@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 展示分派的匿名作品和评分项，提供提交评分及回避入口。 --%>
 <div class="title-block between">
     <div><p class="muted"><a href="<c:url value='/judge'/>">评审任务</a> / <c:out value="${assignment.competitionName}"/></p>
     <h1>匿名评审工作台</h1><p class="subhead"><span class="mono"><c:out value="${assignment.anonymousCode}"/></span> · 锁定版本 V${assignment.versionNo} · <time datetime="${assignment.judgingClosesAt}">${assignment.judgingClosesAt}</time> 截止</p></div>

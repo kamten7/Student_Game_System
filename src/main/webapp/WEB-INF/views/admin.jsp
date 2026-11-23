@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 展示可管理的赛事及其进度，并提供创建赛事入口。 --%>
 <div class="title-block between"><div><h1>赛事管理</h1><p class="subhead">创建赛事、处理资格审核和跟进办赛进度。</p></div>
     <a class="button" href="<c:url value='/admin/competitions/new'/>">创建赛事</a></div>
 <section class="card">

@@ -1,3 +1,4 @@
+/* 处理表单校验、接口请求、邀请码复制及结果发布预览。 */
 (() => {
     const context = document.querySelector('meta[name="app-context"]').content;
     let token = document.querySelector('meta[name="csrf-token"]').content;

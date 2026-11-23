@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 管理学生资料，展示身份核验状态和个人邀请码。 --%>
 <div class="title-block"><h1>个人资料</h1><p class="subhead">管理报名所用的资料和组队邀请码。</p></div>
 <div class="columns">
     <section class="card"><h2>基本资料</h2>

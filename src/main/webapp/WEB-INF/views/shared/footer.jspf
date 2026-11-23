@@ -1,4 +1,4 @@
-</main>
+<%-- 结束公共页面内容区和工作台布局。 --%></main>
 <c:if test="${not empty area}"></div></c:if>
 </body>
 </html>

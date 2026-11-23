@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 集中展示当前学生的报名记录和收到的组队邀请。 --%>
 <div class="title-block between">
     <div><h1>学生工作台</h1><p class="subhead">查看报名状态、组队邀请及下一步任务。</p></div>
     <a class="button" href="<c:url value='/'/>">发现赛事</a>

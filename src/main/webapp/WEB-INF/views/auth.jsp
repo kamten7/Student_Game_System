@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 共用登录和学生注册页面，按入口显示对应表单。 --%>
 <section class="auth">
     <div class="hero"><h1>${register ? '参赛从这里开始' : '回到你的工作台'}</h1><p>集中处理校内赛事、报名、作品和评审任务。</p></div>
     <div class="auth-form">

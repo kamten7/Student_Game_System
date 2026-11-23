@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 创建或编辑赛事草稿，填写赛程、组队人数及评分规则。 --%>
 <div class="title-block"><h1>${empty event ? '创建赛事' : '编辑赛事草稿'}</h1><p class="subhead">赛程按中国标准时间（UTC+08:00）填写，发布后冻结赛制和评分规则。</p></div>
 <form class="card form-stack" data-api="/admin/competitions${empty event ? '' : '/'}${event.id}" data-method="${empty event ? 'POST' : 'PATCH'}" data-next="/admin/competitions/{id}">
     <p class="notice" data-message role="alert" hidden></p>

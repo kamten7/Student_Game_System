@@ -1,3 +1,4 @@
+-- 初始化竞赛管理数据库、表结构和基础角色。
 CREATE DATABASE IF NOT EXISTS student_game_system
     CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 USE student_game_system;

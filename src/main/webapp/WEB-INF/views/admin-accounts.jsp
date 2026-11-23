@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 展示后台账户列表，提供角色筛选及工作人员账号创建入口。 --%>
 <div class="title-block"><h1>账户与校内核验</h1><p class="subhead">管理账户和赛事角色，按校内依据核验学生身份。</p></div>
 <details class="card page-pad">
     <summary>新增工作人员账号</summary>

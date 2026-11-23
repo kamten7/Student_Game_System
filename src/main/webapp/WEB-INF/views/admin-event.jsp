@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 展示赛事管理详情，提供发布、赛程调整和报名审核入口。 --%>
 <div class="title-block between">
     <div><p class="muted"><a href="<c:url value='/admin'/>">赛事管理</a> / <c:out value="${event.competitionNo}"/></p>
     <h1><c:out value="${event.name}"/></h1><p class="subhead"><c:out value="${event.edition}"/> · ${labels[event.entryMode]}</p></div>

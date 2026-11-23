@@ -1,3 +1,4 @@
+-- 升级旧库，为已发布结果增加获奖人员姓名快照。
 USE student_game_system;
 
 SET @ddl = IF(EXISTS(

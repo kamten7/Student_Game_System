@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 展示报名名单与审核记录，供管理员作出资格审核决定。 --%>
 <div class="title-block between">
     <div><p class="muted"><a href="<c:url value='/admin/competitions/${event.id}'/>"><c:out value="${event.name}"/></a> / 资格审核</p>
     <h1>审核参赛报名</h1><p class="subhead mono"><c:out value="${registration.registrationNo}"/></p></div>

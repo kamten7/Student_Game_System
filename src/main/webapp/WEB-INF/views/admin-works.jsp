@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 按赛事查询作品列表，查看交件及评审进度。 --%>
 <div class="title-block"><p class="muted"><a href="<c:url value='/admin/competitions/${event.id}'/>"><c:out value="${event.name}"/></a></p><h1>作品与评委</h1></div>
 <section class="card"><h2>作品管理</h2>
     <form class="actions" method="get">

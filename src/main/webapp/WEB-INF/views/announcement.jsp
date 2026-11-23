@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 展示一届赛事当前公布的结果和获奖名单。 --%>
 <section class="publication-masthead">
     <nav class="publication-path" aria-label="面包屑"><a href="<c:url value='/announcements'/>">获奖公告</a><span> / ${labels[event.entryMode]}</span></nav>
     <h1><c:out value="${event.name}"/></h1>

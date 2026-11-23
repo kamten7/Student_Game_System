@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 核对评分覆盖与获奖结果，确认首次发布或更正。 --%>
 <div class="title-block between">
     <div><p class="muted"><a href="<c:url value='/admin/competitions/${event.id}'/>"><c:out value="${event.name}"/></a> / 结果</p>
         <h1>${empty event.currentPublicationId ? '核对并发布结果' : '核对并发布更正'}</h1>

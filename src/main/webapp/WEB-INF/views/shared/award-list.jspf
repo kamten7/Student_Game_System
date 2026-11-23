@@ -1,4 +1,4 @@
-<c:choose>
+<%-- 复用获奖名单展示，输出奖项、作品及获奖成员。 --%><c:choose>
     <c:when test="${empty awards}"><p class="empty">本届赛事没有获奖条目。</p></c:when>
     <c:otherwise>
         <ul class="award-list">

@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 查看单份作品及其版本，管理评委分派和参评资格。 --%>
 <div class="title-block between"><div><p class="muted"><a href="<c:url value='/admin/competitions/${event.id}/works'/>">作品与评委</a></p>
     <h1><c:out value="${work.anonymousCode}"/></h1><p class="subhead"><c:out value="${event.name}"/> · 每份作品需 ${event.requiredJudges} 份有效评分</p></div>
     <span class="tag">${labels[work.eligibilityStatus]}</span></div>

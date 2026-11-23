@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 展示赛事规则和赛程，并按当前阶段提供报名入口。 --%>
 <section class="hero">
     <span class="tag">${labels[event.phase]} · ${labels[event.entryMode]}</span>
     <h1><c:out value="${event.name}"/></h1>

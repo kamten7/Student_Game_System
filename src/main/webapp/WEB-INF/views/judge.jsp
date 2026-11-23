@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 列出当前评委的分派任务、评审时限和评分状态。 --%>
 <div class="title-block"><h1>评审任务</h1><p class="subhead">查看匿名作品、评审窗口和评分进度。</p></div>
 <section class="card"><h2>我的分派</h2>
     <form method="get" class="actions"><label><span>任务状态</span><select name="status">

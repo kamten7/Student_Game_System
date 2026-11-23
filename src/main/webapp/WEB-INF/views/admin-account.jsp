@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 管理单个账户的资料、角色、启停状态和学生身份核验。 --%>
 <div class="title-block between"><div><p class="muted"><a href="<c:url value='/admin/accounts'/>">账户与核验</a></p><h1><c:out value="${account.username}"/></h1></div><span class="tag">${labels[account.status]}</span></div>
 <div class="columns">
     <c:if test="${not empty account.verificationStatus}"><section class="card"><h2>学生身份核验</h2>

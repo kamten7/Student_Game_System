@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 列出已公开的获奖公告及其查看入口。 --%>
 <section class="publication-masthead">
     <h1>获奖公告</h1>
     <p>查阅各届赛事已公布的获奖作品、参赛团队和获奖人员。</p>

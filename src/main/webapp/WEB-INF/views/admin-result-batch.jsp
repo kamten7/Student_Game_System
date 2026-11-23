@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 查看指定发布批次的结果快照和更正说明。 --%>
 <div class="title-block"><p class="muted"><a href="<c:url value='/admin/competitions/${batch.competitionId}/results'/>">返回结果管理</a></p>
     <h1>第 ${batch.versionNo} 版结果快照</h1><p class="subhead"><time datetime="${batch.publishedAt}">${batch.publishedAt}</time> · ${batch.publicationType eq 'FIRST' ? '首次发布' : '发布更正'}</p></div>
 <div class="stack">

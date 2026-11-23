@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 展示报名名单及审核记录，提供组队、提交和交件入口。 --%>
 <div class="title-block between">
     <div><p class="muted"><a href="<c:url value='/student'/>">我的报名</a> / <c:out value="${registration.registrationNo}"/></p>
     <h1><c:out value="${event.name}"/></h1><p class="subhead"><c:out value="${registration.teamDisplayName}"/> · ${labels[event.entryMode]}</p></div>

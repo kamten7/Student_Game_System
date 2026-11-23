@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 展示公开赛事大厅，支持按名称、阶段和参赛方式筛选。 --%>
 <section class="hero home-hero">
     <span class="tag">校内作品竞赛</span>
     <h1>从校园问题出发<br><span class="hero-accent">给出你的方案</span></h1>

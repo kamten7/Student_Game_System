@@ -1,4 +1,4 @@
-<%@ include file="shared/header.jspf" %>
+<%@ include file="shared/header.jspf" %><%-- 按业务对象和操作筛选后台审计记录。 --%>
 <div class="title-block"><h1>操作审计</h1><p class="subhead">按业务对象查询关键操作记录。</p></div>
 <section class="card">
 <form class="actions" method="get">
