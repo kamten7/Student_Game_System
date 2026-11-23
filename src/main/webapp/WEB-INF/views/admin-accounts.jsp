@@ -49,5 +49,21 @@
             <td><a href="<c:url value='/admin/accounts/${row.id}'/>">管理 ↗</a></td></tr></c:forEach>
     </tbody></table></div>
     <c:if test="${empty accounts.items}"><p class="empty">当前没有符合条件的账户。</p></c:if>
+    <c:if test="${accounts.total gt accounts.size}">
+        <nav class="actions page-pad" aria-label="账户分页">
+            <c:forEach var="direction" items="${[-1,1]}">
+                <c:if test="${accounts.page + direction gt 0 and (accounts.page + direction - 1) * accounts.size lt accounts.total}">
+                    <c:url var="pageLink" value="/admin/accounts">
+                        <c:param name="q" value="${query.q}"/><c:param name="role" value="${query.role}"/>
+                        <c:param name="verificationStatus" value="${query.verificationStatus}"/>
+                        <c:param name="status" value="${query.status}"/><c:param name="size" value="${accounts.size}"/>
+                        <c:param name="page" value="${accounts.page + direction}"/>
+                    </c:url>
+                    <a class="button secondary" href="<c:out value='${pageLink}'/>">${direction lt 0 ? '上一页' : '下一页'}</a>
+                </c:if>
+            </c:forEach>
+            <span class="muted">第 ${accounts.page} 页 · 共 ${accounts.total} 个账户</span>
+        </nav>
+    </c:if>
 </section>
 <%@ include file="shared/footer.jspf" %>

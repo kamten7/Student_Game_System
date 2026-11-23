@@ -14,7 +14,7 @@
         <input type="search" name="q" value="<c:out value='${query.q}'/>" placeholder="搜索赛事名称" aria-label="赛事名称">
         <select name="phase" aria-label="赛事阶段">
             <option value="">全部阶段</option>
-            <c:forEach var="phase" items="${['UPCOMING','REGISTRATION','SUBMISSION','JUDGING','RESULTS','CANCELLED']}">
+            <c:forEach var="phase" items="${['UPCOMING','REGISTRATION','QUALIFICATION','AWAITING_SUBMISSION','SUBMISSION','AWAITING_JUDGING','JUDGING','AWAITING_RESULTS','RESULTS','CANCELLED']}">
                 <option value="${phase}" ${query.phase eq phase ? 'selected' : ''}>${labels[phase]}</option>
             </c:forEach>
         </select>
