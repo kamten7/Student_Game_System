@@ -1,0 +1,65 @@
+---
+title: 学生报名、组队与资格审核
+config:
+  htmlLabels: false
+  theme: base
+  themeVariables:
+    fontFamily: Microsoft YaHei, sans-serif
+    fontSize: 16px
+    lineColor: "#58796a"
+    edgeLabelBackground: "#ffffff"
+  flowchart:
+    nodeSpacing: 26
+    rankSpacing: 25
+    padding: 10
+---
+flowchart TD
+    START(["第 1 步 学生登录并打开目标届次"])
+    READY{"报名开放且身份已核验？"}
+    WAIT["完成校内核验或核对报名时间"]
+    DRAFT["第 2 步 新建报名草稿"]
+    DELETE(["未提交的草稿可删除，不占用资格"])
+    MODE{"参赛方式"}
+    SOLO["个人赛仅使用本人资料"]
+    TEAM["队友在个人资料复制邀请码并发给队长"]
+    INVITE["队长粘贴队友的邀请码并发送邀请"]
+    ACCEPT["队友到组队邀请点击接受"]
+    SUBMIT["第 3 步 队长或个人在报名或补正窗口正式提交"]
+    VALID{"人数和成员身份合规？"}
+    CORRECT["在开放时间内补齐确认或调整成员"]
+    CLAIM["第 4 步 按本届赛事逐人检查参赛资格"]
+    CONFLICT{"队内有人占用本届资格？"}
+    DUP["整队提交回滚。检查本届旧报名或更换冲突队员"]
+    PENDING["第 5 步 保存全员参赛资格与名单，进入待处理"]
+    REVIEW{"负责人审核或到期结案"}
+    APPROVE(["审核通过。作品提交窗口开放后可以交件"])
+    RETURN["退回补正。保留本届资格，补正截止前可重提"]
+    RELEASE(["审核拒绝、符合条件撤回或到期未通过，释放本届资格"])
+    SCOPE["其他届次的报名可以同时存在"]
+
+    START --> READY
+    READY -->|否| WAIT
+    READY -->|是| DRAFT --> MODE
+    DRAFT -.-> DELETE
+    MODE -->|个人赛| SOLO --> SUBMIT
+    MODE -->|团队赛| TEAM --> INVITE --> ACCEPT --> SUBMIT
+    SUBMIT --> VALID
+    VALID -->|否| CORRECT
+    CORRECT -.-> SUBMIT
+    VALID -->|是| CLAIM --> CONFLICT
+    CLAIM -.-> SCOPE
+    CONFLICT -->|是| DUP
+    CONFLICT -->|否| PENDING --> REVIEW
+    REVIEW -->|通过| APPROVE
+    REVIEW -->|退回且仍可补正| RETURN
+    RETURN -.-> SUBMIT
+    REVIEW -->|拒绝、撤回或到期| RELEASE
+
+    classDef stage fill:#e6f1e8,stroke:#58826e,color:#142c22,font-weight:bold
+    classDef gate fill:#f2f5ef,stroke:#688477,color:#142c22
+    classDef issue fill:#fff2dc,stroke:#b88d47,color:#553d18
+    classDef result fill:#d9efb7,stroke:#668849,color:#253b1b
+    class START,DRAFT,SUBMIT,CLAIM,PENDING stage
+    class READY,MODE,VALID,CONFLICT,REVIEW gate
+    class WAIT,CORRECT,DUP,RETURN issue
+    class APPROVE,RELEASE,SCOPE,DELETE result

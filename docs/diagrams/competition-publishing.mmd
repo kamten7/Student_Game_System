@@ -1,0 +1,53 @@
+---
+title: 赛事发布与赛程校验
+config:
+  htmlLabels: false
+  theme: base
+  themeVariables:
+    fontFamily: Microsoft YaHei, sans-serif
+    fontSize: 16px
+    lineColor: "#58796a"
+    edgeLabelBackground: "#ffffff"
+  flowchart:
+    nodeSpacing: 26
+    rankSpacing: 27
+    padding: 10
+---
+flowchart TD
+    START(["第 1 步 负责人或平台管理员进入赛事管理"])
+    FORM["第 2 步 创建赛事，填写名称、届次、规则和参赛方式"]
+    RULE["设定团队人数、每件所需评委与评分维度"]
+    SCHEDULE["第 3 步 按中国标准时间填写赛程"]
+    TIME1["报名开始 ＜ 报名截止 ≤ 补正截止 ≤ 资格审核截止"]
+    TIME2["资格审核截止 ≤ 作品提交开始 ＜ 作品提交截止"]
+    TIME3["作品提交截止 ≤ 评审开始 ＜ 评审截止"]
+    SAVE["第 4 步 保存草稿"]
+    VALID{"信息和赛程有效？"}
+    FIX["按提示修正。评分维度权重合计 100%"]
+    PUBLISH["第 5 步 打开草稿，点击发布赛事"]
+    OPEN{"报名已截止？"}
+    EXPIRED["返回编辑草稿，更新本届赛程"]
+    DONE["第 6 步 在赛事大厅确认展示"]
+    STARTED{"报名已开始？"}
+    UPCOMING(["即将开放，学生可以先查看规则"])
+    ENTRY(["报名中，已核验学生可以新建报名"])
+
+    START --> FORM --> RULE --> SCHEDULE --> SAVE --> VALID
+    SCHEDULE -.-> TIME1 --> TIME2 --> TIME3
+    VALID -->|通过| PUBLISH --> OPEN
+    VALID -->|未通过| FIX
+    FIX -.-> FORM
+    OPEN -->|否| DONE --> STARTED
+    OPEN -->|是| EXPIRED
+    EXPIRED -.-> SCHEDULE
+    STARTED -->|时间未到| UPCOMING
+    STARTED -->|时间已到| ENTRY
+
+    classDef stage fill:#e6f1e8,stroke:#58826e,color:#142c22,font-weight:bold
+    classDef gate fill:#f2f5ef,stroke:#688477,color:#142c22
+    classDef issue fill:#fff2dc,stroke:#b88d47,color:#553d18
+    classDef result fill:#d9efb7,stroke:#668849,color:#253b1b
+    class START,FORM,SCHEDULE,SAVE,PUBLISH,DONE stage
+    class VALID,OPEN,STARTED gate
+    class FIX,EXPIRED issue
+    class UPCOMING,ENTRY result

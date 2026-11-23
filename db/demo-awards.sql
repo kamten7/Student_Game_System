@@ -33,11 +33,11 @@ CREATE TEMPORARY TABLE demo_award_rows (
     file_no INT NOT NULL
 );
 INSERT INTO demo_award_rows VALUES
-    ('DEMO-R14','DEMO-11','demo.student01',NULL,NULL,'个人参赛',JSON_ARRAY('林予'),'一天中的校园出行节奏','demo.judge01',94,1,'一等奖',8),
-    ('DEMO-R15','DEMO-11','demo.student03',NULL,NULL,'个人参赛',JSON_ARRAY('陈曦'),'图书馆借阅主题地图','demo.judge02',91,2,'二等奖',9),
-    ('DEMO-R16','DEMO-11','demo.student05',NULL,NULL,'个人参赛',JSON_ARRAY('方屿'),'校园服务等待时间观察','demo.judge01',88,3,'三等奖',10),
-    ('DEMO-R17','DEMO-12','demo.student02','demo.student04','折线设计组','折线设计组',JSON_ARRAY('周禾','许宁'),'雨天连廊停留节点设计','demo.judge02',93,1,'一等奖',11),
-    ('DEMO-R18','DEMO-12','demo.student01','demo.student05','邻里空间组','邻里空间组',JSON_ARRAY('林予','方屿'),'共享学习角与夜间导视','demo.judge01',89,2,'二等奖',12);
+    ('DEMO-R14','DEMO-11','student01',NULL,NULL,'个人参赛',JSON_ARRAY('林予'),'一天中的校园出行节奏','judge01',94,1,'一等奖',8),
+    ('DEMO-R15','DEMO-11','student03',NULL,NULL,'个人参赛',JSON_ARRAY('陈曦'),'图书馆借阅主题地图','judge02',91,2,'二等奖',9),
+    ('DEMO-R16','DEMO-11','student05',NULL,NULL,'个人参赛',JSON_ARRAY('方屿'),'校园服务等待时间观察','judge01',88,3,'三等奖',10),
+    ('DEMO-R17','DEMO-12','student02','student04','折线设计组','折线设计组',JSON_ARRAY('周禾','许宁'),'雨天连廊停留节点设计','judge02',93,1,'一等奖',11),
+    ('DEMO-R18','DEMO-12','student01','student05','邻里空间组','邻里空间组',JSON_ARRAY('林予','方屿'),'共享学习角与夜间导视','judge01',89,2,'二等奖',12);
 
 START TRANSACTION;
 

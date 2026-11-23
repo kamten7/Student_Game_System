@@ -12,6 +12,24 @@
 
 **技术栈**　Spring MVC · Spring JDBC · MyBatis · JSP/JSTL · 原生 JavaScript · MySQL
 
+## 业务流程图
+
+### 赛事发布与赛程校验
+
+负责人填写赛程并保存草稿。发布时须早于报名截止。发布后，赛事大厅根据报名开始时间显示「即将开放」或「报名中」。
+
+![赛事发布与赛程校验流程图](docs/diagrams/competition-publishing.png)
+
+[赛事发布流程图源](docs/diagrams/competition-publishing.mmd)
+
+### 学生报名、组队与资格审核
+
+学生完成校内核验后可报名。团队赛正式提交时，系统检查已确认成员是否占用了本届赛事的参赛资格。学生可同时参与不同赛事。
+
+![学生报名、组队与资格审核流程图](docs/diagrams/registration-review.png)
+
+[学生报名流程图源](docs/diagrams/registration-review.mmd)
+
 ## 本地启动
 
 准备 **JDK 17、Maven 3.9、Tomcat 10.1、MySQL 8.0**。JDK 21 也可用于运行，Maven 编译目标为 Java 17。
@@ -44,14 +62,15 @@ IDEA 中没有 Tomcat 集成时，可以在项目根目录运行 `mvn compile wa
 
 空库可以从管理员发布赛事、学生注册和核验开始走流程。学生注册时必填申报学号。管理员通过「账户与核验」创建评委、赛事负责人或其他管理员账号，工作人员角色允许兼任。
 
-要直接查看示例赛事和获奖名单，可在单独的本地演示库按顺序导入 [基础演示数据](db/demo-data.sql) 和 [获奖名单示例](db/demo-awards.sql)。这些脚本使用 `student_game_system` 库名并写入合成数据，仅供本地演示。
+要直接查看各阶段赛事、报名和获奖名单，可在单独的本地演示库依次导入 [基础演示数据](db/demo-data.sql)、[获奖名单示例](db/demo-awards.sql) 和 [分阶段演示数据](db/demo-scenarios.sql)。这些脚本使用 `student_game_system` 库名并写入合成数据，仅供本地演示。
 
 | 示例账号 | 角色 |
 | --- | --- |
 | `demo.admin` | 平台管理员 |
 | `demo.organizer` | 赛事负责人 |
-| `demo.judge01`、`demo.judge02` | 评委 |
-| `demo.student01` 至 `demo.student06` | 学生 |
+| `judge01` 至 `judge06` | 评委 |
+| `student01` 至 `student20` | 学生。含待核验和核验未通过示例 |
+| `student21`、`student22` | 已停用和已删除账号 |
 
 以上示例账号共用演示密码 `Jingxu-Demo2026!`。可将 [示例 PDF](db/demo-work.pdf) 用作新交件。要预览种子数据中的已有作品，查询 `submission_version` 表里的演示记录（`request_id` 以 `DEMO-WORK-` 开头），按对应的 `storage_key` 命名并复制示例 PDF 到私有附件目录。
 
@@ -59,6 +78,7 @@ IDEA 中没有 Tomcat 集成时，可以在项目根目录运行 `mvn compile wa
 
 ```text
 db/                     建库、迁移和本地演示数据
+docs/diagrams/          业务流程图与 Mermaid 图源
 src/main/java/          控制器、业务服务、数据访问与权限检查
 src/main/resources/     Spring、MyBatis 和通用连接参数
 src/main/webapp/        JSP 页面与静态资源

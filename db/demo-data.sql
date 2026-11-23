@@ -15,14 +15,14 @@ CREATE TEMPORARY TABLE demo_accounts (
 INSERT INTO demo_accounts VALUES
     ('demo.admin', 'ADMIN', '沈知远'),
     ('demo.organizer', 'ORGANIZER', '唐婧'),
-    ('demo.judge01', 'JUDGE', '顾砚'),
-    ('demo.judge02', 'JUDGE', '叶澄'),
-    ('demo.student01', 'STUDENT', NULL),
-    ('demo.student02', 'STUDENT', NULL),
-    ('demo.student03', 'STUDENT', NULL),
-    ('demo.student04', 'STUDENT', NULL),
-    ('demo.student05', 'STUDENT', NULL),
-    ('demo.student06', 'STUDENT', NULL);
+    ('judge01', 'JUDGE', '顾砚'),
+    ('judge02', 'JUDGE', '叶澄'),
+    ('student01', 'STUDENT', NULL),
+    ('student02', 'STUDENT', NULL),
+    ('student03', 'STUDENT', NULL),
+    ('student04', 'STUDENT', NULL),
+    ('student05', 'STUDENT', NULL),
+    ('student06', 'STUDENT', NULL);
 
 CREATE TEMPORARY TABLE demo_events (
     code VARCHAR(12) PRIMARY KEY,
@@ -61,19 +61,19 @@ CREATE TEMPORARY TABLE demo_registrations (
     status VARCHAR(20) NOT NULL
 );
 INSERT INTO demo_registrations VALUES
-    ('DEMO-R01', 'DEMO-01', 'demo.student01', '萤火工坊', 'PENDING'),
-    ('DEMO-R02', 'DEMO-01', 'demo.student03', '方舟小组', 'DRAFT'),
-    ('DEMO-R03', 'DEMO-02', 'demo.student03', NULL, 'PENDING'),
-    ('DEMO-R04', 'DEMO-02', 'demo.student04', NULL, 'CHANGES_REQUESTED'),
-    ('DEMO-R05', 'DEMO-03', 'demo.student01', NULL, 'APPROVED'),
-    ('DEMO-R06', 'DEMO-03', 'demo.student02', NULL, 'APPROVED'),
-    ('DEMO-R07', 'DEMO-04', 'demo.student01', '绿光行动组', 'APPROVED'),
-    ('DEMO-R08', 'DEMO-04', 'demo.student03', '清风小组', 'APPROVED'),
-    ('DEMO-R09', 'DEMO-05', 'demo.student05', NULL, 'APPROVED'),
-    ('DEMO-R10', 'DEMO-05', 'demo.student04', NULL, 'APPROVED'),
-    ('DEMO-R11', 'DEMO-06', 'demo.student01', '循环设计组', 'APPROVED'),
-    ('DEMO-R12', 'DEMO-06', 'demo.student02', '青芽行动组', 'APPROVED'),
-    ('DEMO-R13', 'DEMO-09', 'demo.student04', NULL, 'APPROVED');
+    ('DEMO-R01', 'DEMO-01', 'student01', '萤火工坊', 'PENDING'),
+    ('DEMO-R02', 'DEMO-01', 'student03', '方舟小组', 'DRAFT'),
+    ('DEMO-R03', 'DEMO-02', 'student03', NULL, 'PENDING'),
+    ('DEMO-R04', 'DEMO-02', 'student04', NULL, 'CHANGES_REQUESTED'),
+    ('DEMO-R05', 'DEMO-03', 'student01', NULL, 'APPROVED'),
+    ('DEMO-R06', 'DEMO-03', 'student02', NULL, 'APPROVED'),
+    ('DEMO-R07', 'DEMO-04', 'student01', '绿光行动组', 'APPROVED'),
+    ('DEMO-R08', 'DEMO-04', 'student03', '清风小组', 'APPROVED'),
+    ('DEMO-R09', 'DEMO-05', 'student05', NULL, 'APPROVED'),
+    ('DEMO-R10', 'DEMO-05', 'student04', NULL, 'APPROVED'),
+    ('DEMO-R11', 'DEMO-06', 'student01', '循环设计组', 'APPROVED'),
+    ('DEMO-R12', 'DEMO-06', 'student02', '青芽行动组', 'APPROVED'),
+    ('DEMO-R13', 'DEMO-09', 'student04', NULL, 'APPROVED');
 
 CREATE TEMPORARY TABLE demo_members (
     registration_no VARCHAR(32) NOT NULL,
@@ -82,25 +82,25 @@ CREATE TEMPORARY TABLE demo_members (
     PRIMARY KEY (registration_no, username)
 );
 INSERT INTO demo_members VALUES
-    ('DEMO-R01', 'demo.student01', 'CONFIRMED'),
-    ('DEMO-R01', 'demo.student02', 'CONFIRMED'),
-    ('DEMO-R02', 'demo.student03', 'CONFIRMED'),
-    ('DEMO-R02', 'demo.student04', 'INVITED'),
-    ('DEMO-R03', 'demo.student03', 'CONFIRMED'),
-    ('DEMO-R04', 'demo.student04', 'CONFIRMED'),
-    ('DEMO-R05', 'demo.student01', 'CONFIRMED'),
-    ('DEMO-R06', 'demo.student02', 'CONFIRMED'),
-    ('DEMO-R07', 'demo.student01', 'CONFIRMED'),
-    ('DEMO-R07', 'demo.student02', 'CONFIRMED'),
-    ('DEMO-R08', 'demo.student03', 'CONFIRMED'),
-    ('DEMO-R08', 'demo.student04', 'CONFIRMED'),
-    ('DEMO-R09', 'demo.student05', 'CONFIRMED'),
-    ('DEMO-R10', 'demo.student04', 'CONFIRMED'),
-    ('DEMO-R11', 'demo.student01', 'CONFIRMED'),
-    ('DEMO-R11', 'demo.student03', 'CONFIRMED'),
-    ('DEMO-R12', 'demo.student02', 'CONFIRMED'),
-    ('DEMO-R12', 'demo.student05', 'CONFIRMED'),
-    ('DEMO-R13', 'demo.student04', 'CONFIRMED');
+    ('DEMO-R01', 'student01', 'CONFIRMED'),
+    ('DEMO-R01', 'student02', 'CONFIRMED'),
+    ('DEMO-R02', 'student03', 'CONFIRMED'),
+    ('DEMO-R02', 'student04', 'INVITED'),
+    ('DEMO-R03', 'student03', 'CONFIRMED'),
+    ('DEMO-R04', 'student04', 'CONFIRMED'),
+    ('DEMO-R05', 'student01', 'CONFIRMED'),
+    ('DEMO-R06', 'student02', 'CONFIRMED'),
+    ('DEMO-R07', 'student01', 'CONFIRMED'),
+    ('DEMO-R07', 'student02', 'CONFIRMED'),
+    ('DEMO-R08', 'student03', 'CONFIRMED'),
+    ('DEMO-R08', 'student04', 'CONFIRMED'),
+    ('DEMO-R09', 'student05', 'CONFIRMED'),
+    ('DEMO-R10', 'student04', 'CONFIRMED'),
+    ('DEMO-R11', 'student01', 'CONFIRMED'),
+    ('DEMO-R11', 'student03', 'CONFIRMED'),
+    ('DEMO-R12', 'student02', 'CONFIRMED'),
+    ('DEMO-R12', 'student05', 'CONFIRMED'),
+    ('DEMO-R13', 'student04', 'CONFIRMED');
 
 START TRANSACTION;
 
@@ -118,27 +118,27 @@ INSERT INTO student_profile(user_id, claimed_student_no, student_no, full_name, 
     verification_status, verified_by, verified_at, invite_code)
 SELECT id, 'D20260001', 'D20260001', '林予', '计算机学院', '软件工程',
        'VERIFIED', @demo_admin, DATE_SUB(@seed_now, INTERVAL 90 DAY), 'jingxu-demo-invite-01'
-FROM user_account WHERE username='demo.student01'
+FROM user_account WHERE username='student01'
 UNION ALL
 SELECT id, 'D20260002', 'D20260002', '周禾', '设计学院', '视觉传达设计',
        'VERIFIED', @demo_admin, DATE_SUB(@seed_now, INTERVAL 90 DAY), 'jingxu-demo-invite-02'
-FROM user_account WHERE username='demo.student02'
+FROM user_account WHERE username='student02'
 UNION ALL
 SELECT id, 'D20260003', 'D20260003', '陈曦', '统计学院', '数据科学',
        'VERIFIED', @demo_admin, DATE_SUB(@seed_now, INTERVAL 90 DAY), 'jingxu-demo-invite-03'
-FROM user_account WHERE username='demo.student03'
+FROM user_account WHERE username='student03'
 UNION ALL
 SELECT id, 'D20260004', 'D20260004', '许宁', '建筑学院', '城乡规划',
        'VERIFIED', @demo_admin, DATE_SUB(@seed_now, INTERVAL 90 DAY), 'jingxu-demo-invite-04'
-FROM user_account WHERE username='demo.student04'
+FROM user_account WHERE username='student04'
 UNION ALL
 SELECT id, 'D20260005', 'D20260005', '方屿', '公共管理学院', '公共事业管理',
        'VERIFIED', @demo_admin, DATE_SUB(@seed_now, INTERVAL 90 DAY), 'jingxu-demo-invite-05'
-FROM user_account WHERE username='demo.student05'
+FROM user_account WHERE username='student05'
 UNION ALL
 SELECT id, 'D20260006', NULL, '程砚', '信息工程学院', '信息管理',
        'PENDING', NULL, NULL, NULL
-FROM user_account WHERE username='demo.student06';
+FROM user_account WHERE username='student06';
 
 INSERT INTO competition(competition_no, name, edition, rules_text, organizer_id, entry_mode,
     min_team_size, max_team_size, registration_opens_at, registration_closes_at, correction_closes_at,
@@ -230,11 +230,11 @@ CREATE TEMPORARY TABLE demo_judging (
     score_c INT
 );
 INSERT INTO demo_judging VALUES
-    ('DEMO-R07', 'demo.judge01', NULL, NULL, NULL),
-    ('DEMO-R08', 'demo.judge02', 84, 86, 82),
-    ('DEMO-R09', 'demo.judge01', 92, 88, 84),
-    ('DEMO-R11', 'demo.judge01', 94, 92, 90),
-    ('DEMO-R12', 'demo.judge02', 90, 88, 86);
+    ('DEMO-R07', 'judge01', NULL, NULL, NULL),
+    ('DEMO-R08', 'judge02', 84, 86, 82),
+    ('DEMO-R09', 'judge01', 92, 88, 84),
+    ('DEMO-R11', 'judge01', 94, 92, 90),
+    ('DEMO-R12', 'judge02', 90, 88, 86);
 
 INSERT INTO review_assignment(submission_version_id, judge_id, status, assigned_at)
 SELECT s.locked_version_id, a.id, IF(j.score_a IS NULL,'ASSIGNED','SUBMITTED'), DATE_ADD(c.judging_opens_at, INTERVAL 1 HOUR)
