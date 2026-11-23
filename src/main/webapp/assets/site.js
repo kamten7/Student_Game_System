@@ -23,6 +23,23 @@
         if (!Number.isNaN(date.getTime())) input.value = new Date(date.getTime() + 8 * 3600000).toISOString().slice(0, 16);
     }
 
+    for (const button of document.querySelectorAll('[data-copy-invite]')) {
+        const field = document.getElementById(button.dataset.copyInvite);
+        const status = button.closest('section').querySelector('[data-copy-invite-status]');
+        // 浏览器限制剪贴板时选中邀请码，方便手动复制。
+        button.addEventListener('click', async () => {
+            status.hidden = false;
+            try {
+                await navigator.clipboard.writeText(field.value);
+                status.textContent = '已复制邀请码。';
+            } catch {
+                field.focus();
+                field.select();
+                status.textContent = '邀请码已选中，请手动复制。';
+            }
+        });
+    }
+
     for (const rubric of document.querySelectorAll('[data-rubric]')) {
         const list = rubric.querySelector('[data-rubric-list]');
         const template = rubric.querySelector('[data-rubric-template]');

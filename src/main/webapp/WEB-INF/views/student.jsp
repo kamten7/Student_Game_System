@@ -19,7 +19,10 @@
     </c:choose>
 </section>
 <section class="card page-pad" id="invitations">
-    <h2>组队邀请</h2>
+    <div class="between">
+        <h2>组队邀请</h2>
+        <a href="<c:url value='/student/profile#invite-code'/>">我的邀请码</a>
+    </div>
     <c:if test="${empty invitations}"><p class="empty">当前没有组队邀请。</p></c:if>
     <ul class="line-list">
         <c:forEach var="invite" items="${invitations}"><li class="between">

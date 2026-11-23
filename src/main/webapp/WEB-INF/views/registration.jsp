@@ -19,7 +19,10 @@
         </ul>
         <c:if test="${editable and event.entryMode eq 'TEAM'}">
             <form class="form-stack" data-api="/student/registrations/${registration.id}/invitations">
-                <label><span>添加队友</span><input name="inviteCode" maxlength="36" required placeholder="输入队友分享的邀请码"></label>
+                <p class="notice" data-message role="alert" hidden></p>
+                <label><span>队友的邀请码</span><input name="inviteCode" maxlength="36" required autocomplete="off"
+                    autocapitalize="off" spellcheck="false" aria-describedby="invite-help" placeholder="粘贴队友发给你的邀请码"></label>
+                <p class="muted" id="invite-help">请队友用自己的学生账号，在「个人资料 → 组队邀请码」复制并发给你。发送后，队友需要在「组队邀请」接受。</p>
                 <div><button class="button secondary">发送邀请</button></div>
             </form>
             <details><summary>修改队伍展示名</summary><form class="form-stack" data-api="/student/registrations/${registration.id}" data-method="PATCH">

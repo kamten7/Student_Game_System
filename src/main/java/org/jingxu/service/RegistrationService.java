@@ -156,8 +156,11 @@ public class RegistrationService {
         requireTeam(competition);
         checkEditable(row, competition, competitions.now());
         accounts.requireVerified(actor.id());
-        Long student = mapper.inviteRecipient(required(values, "inviteCode", 36));
-        if (student == null || student == actor.id()) throw WebProblem.invalid("该邀请码不可用。");
+        String code = optional(values, "inviteCode", 36);
+        if (code.isEmpty()) throw WebProblem.invalid("请填写队友的邀请码。");
+        Long student = mapper.inviteRecipient(code);
+        if (student == null) throw WebProblem.invalid("未找到可邀请的学生。请让已核验的队友从个人资料复制最新的邀请码。");
+        if (student == actor.id()) throw WebProblem.invalid("这是你自己的邀请码。请填写队友发给你的邀请码。");
         Map<String, Object> previous = member(id, student);
         if (previous != null && Set.of("INVITED", "CONFIRMED").contains(text(previous, "invitationStatus"))) {
             throw WebProblem.conflict("该成员已在报名名单中。");
